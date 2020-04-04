@@ -1,12 +1,12 @@
+#!/bin/sh
 ###
- # @description       : 
+ # @description       : Install NGINX with HTTP 2 and GeoIP databases
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 03/04/2020 16:51:13
+ # @last modified     : 04/04/2020 14:55:43
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
-#!/bin/sh
 
 dnf remove nginx -y
 

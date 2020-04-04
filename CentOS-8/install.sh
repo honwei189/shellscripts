@@ -1,3 +1,12 @@
+#!/bin/sh
+###
+ # @description       : Install CentOS 8 necessary softwares, PHP and mySQL
+ # @version           : "1.0.0" 
+ # @creator           : Gordon Lim <honwei189@gmail.com>
+ # @created           : 03/04/2020 10:07:08
+ # @last modified     : 04/04/2020 14:54:55
+ # @last modified by  : Gordon Lim <honwei189@gmail.com>
+ ###
 /usr/sbin/setenforce 0 2>&1 >/dev/null
 sed -i 's/SELINUX=enforcing/#SELINUX=enforcing\nSELINUX=disabled/g' /etc/selinux/config
 
@@ -142,7 +151,7 @@ echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
 echo "actionunban = ipset del fail2ban-<name> <ip> -exist" >> /etc/fail2ban/jail.d/firewallcmd.conf
 
 touch /etc/fail2ban/filter.d/http.conf
-touch /etc/fail2ban/filter.d/http2.conf
+#touch /etc/fail2ban/filter.d/http2.conf
 
 echo "[Definition]" >> /etc/fail2ban/filter.d/http.conf
 #echo "failregex = <HOST> -.*- .*HTTP/1.* .* .*$" >> /etc/fail2ban/filter.d/http.conf
