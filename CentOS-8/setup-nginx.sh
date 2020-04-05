@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 04/04/2020 14:55:43
+ # @last modified     : 05/04/2020 13:51:23
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -209,31 +209,37 @@ rm -rf nginx
 
 ##########
 
-echo "####### GeoIP #######"
-echo ""
-echo "If you doesn't have an account from MaxMind (GeoIP), please go to following website to register and create a licence key"
-echo ""
-echo "https://www.maxmind.com/en/geolite2/signup"
-echo ""
-echo -n "Enter your AccountID and press [ENTER]: "
-read var_geoaccountid
-
-if [ "$var_geoaccountid" == "" ]
+if [ ! -z "$(type -P geoipupdate)" ]
 then
-    echo "Skip ..."
-else
-    sed -i 's/AccountID YOUR_ACCOUNT_ID_HERE/AccountID '$var_geoaccountid'/g' /etc/GeoIP.conf
+  if [ -f /etc/GeoIP.conf ] && [ ! -z "$(cat GeoIP.conf | grep 'AccountID YOUR_ACCOUNT_ID_HERE')" ]; then
+    echo "####### GeoIP #######"
+    echo ""
+    echo "If you doesn't have an account from MaxMind (GeoIP), please go to following website to register and create a licence key"
+    echo ""
+    echo "https://www.maxmind.com/en/geolite2/signup"
+    echo ""
+    echo -n "Enter your AccountID and press [ENTER]: "
+    read var_geoaccountid
 
-    echo -n "Enter your licence key and press [ENTER]: "
-    read var_geolicencekey
-
-    if [ ! -z "$var_geolicencekey" ]
+    if [ "$var_geoaccountid" == "" ]
     then
-        sed -i 's/LicenseKey YOUR_LICENSE_KEY_HERE/LicenseKey '$var_geolicencekey'/g' /etc/GeoIP.conf
-    else
         echo "Skip ..."
-    fi
-fi
+    else
+        sed -i 's/AccountID YOUR_ACCOUNT_ID_HERE/AccountID '$var_geoaccountid'/g' /etc/GeoIP.conf
 
-geoipupdate
+        echo -n "Enter your licence key and press [ENTER]: "
+        read var_geolicencekey
+
+        if [ ! -z "$var_geolicencekey" ]
+        then
+            sed -i 's/LicenseKey YOUR_LICENSE_KEY_HERE/LicenseKey '$var_geolicencekey'/g' /etc/GeoIP.conf
+        else
+            echo "Skip ..."
+        fi
+    fi
+  fi
+
+  geoipupdate
+
+fi
 

@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 04/04/2020 14:54:55
+ # @last modified     : 04/04/2020 21:14:17
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 /usr/sbin/setenforce 0 2>&1 >/dev/null
@@ -332,6 +332,11 @@ make
 make install
 
 pip3 install speedtest-cli
+
+dnf module install go-toolset -y
+mkdir $HOME/go
+echo "" >> ~/.bashrc
+echo "export PATH=\"\$PATH:~/go/bin/\"" >> ~/.bashrc
 
 ##########
 
