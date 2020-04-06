@@ -4,9 +4,17 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 04/04/2020 21:10:20
- # @last modified     : 05/04/2020 13:51:55
+ # @last modified     : 06/04/2020 10:20:57
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
+
+dnf remove nginx -y
+
+getent passwd nginx > /dev/null 2&>1
+
+if [ ! $? -eq 0 ]; then
+    useradd nginx
+fi
 
 #If install from minimal
 dnf install gcc gcc-c++ cmake pcre-devel -y
