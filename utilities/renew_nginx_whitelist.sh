@@ -4,10 +4,12 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 08/04/2020 16:50:52
- # @last modified     : 08/04/2020 16:54:28
+ # @last modified     : 12/04/2020 15:13:06
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
+#cron job:
+#0 * * * *	sh renew_nginx_whitelist.sh >/dev/null 2>&1
 #nginx config
 #e.g:
 #    location / {
@@ -29,7 +31,7 @@ ips="192.168.1.0/24
 ################################################################
 # Whitelist config file  (DO NOT CHANGE)
 ################################################################
-whitelist="/etc/nginx/whitelist.conf"
+whitelist="/etc/nginx/conf.d/server/whitelist.conf"
 
 
 ##########
