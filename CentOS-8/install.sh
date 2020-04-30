@@ -4,11 +4,17 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 04/04/2020 21:14:17
+ # @last modified     : 25/04/2020 16:36:35
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 /usr/sbin/setenforce 0 2>&1 >/dev/null
 sed -i 's/SELINUX=enforcing/#SELINUX=enforcing\nSELINUX=disabled/g' /etc/selinux/config
+
+# firewall-cmd --permanent --add-source=192.168.1.0/24 --zone=trusted
+# firewall-cmd --permanent --add-service=ssh/tcp --zone trusted
+firewall-cmd --permanent --add-port=22/tcp --zone trusted
+# firewall-cmd --permanent --remove-service=ssh --zone public
+# firewall-cmd --permanent --add-port=3306/tcp --zone trusted
 
 firewall-cmd --permanent --add-service=http
 firewall-cmd --permanent --add-service=https
@@ -20,6 +26,20 @@ firewall-cmd --reload
 
 ln -s /usr/bin/firewall-cmd /usr/bin/fw
 
+
+### Disable IPv6
+sysctl -w net.ipv6.conf.all.disable_ipv6=1
+sysctl -w net.ipv6.conf.default.disable_ipv6=1
+echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf
+echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf
+echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> /etc/sysctl.conf
+sysctl -p
+
+
+### Disable IPv6 from SSH
+sed -i 's/^#AddressFamily any/#AddressFamily any\nAddressFamily inet/' /etc/ssh/sshd_config
+sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' /etc/ssh/sshd_config
+service sshd restart
 
 
 cd /etc/pki/rpm-gpg/
@@ -64,12 +84,12 @@ sed -i 's/#PermitEmptyPasswords no/PermitEmptyPasswords no/g' /etc/ssh/sshd_conf
 dnf install p7zip p7zip-plugins -y
 
 
-#Install Fail2ban
+### Install Fail2ban
 dnf install whois fail2ban fail2ban-systemd -y
 echo "[DEFAULT]" >> /etc/fail2ban/jail.local
 echo "ignoreip = 127.0.0.1/8 192.168.1.0/24" >> /etc/fail2ban/jail.local
 echo "" >> /etc/fail2ban/jail.local
-echo "# An ip address/host is banned if it has generated "maxretry" during the last "findtime" seconds." >> /etc/fail2ban/jail.local
+echo "# An ip address/host is banned if it has generated \"maxretry\" during the last \"findtime\" seconds." >> /etc/fail2ban/jail.local
 echo "#bantime  = -1" >> /etc/fail2ban/jail.local
 echo "bantime = 31536000" >> /etc/fail2ban/jail.local
 echo "# 預設在 600 秒內達到 maxretry 的次數就封鎖" >> /etc/fail2ban/jail.local
@@ -77,9 +97,7 @@ echo "findtime = 600" >> /etc/fail2ban/jail.local
 echo "maxretry = 2" >> /etc/fail2ban/jail.local
 echo "action = %(action_mwl)s" >> /etc/fail2ban/jail.local
 echo "#destemail = yourname@your_domain" >> /etc/fail2ban/jail.local
-echo "sendername = fail2ban" >> /etc/fail2ban/jail.local
-echo "#mta = sendmail" >> /etc/fail2ban/jail.local
-echo "#protocol = tcp" >> /etc/fail2ban/jail.local
+echo "sendername = SysAlarm" >> /etc/fail2ban/jail.local
 echo "" >> /etc/fail2ban/jail.local
 echo "" >> /etc/fail2ban/jail.local
 echo "#[fail2ban-ssh] # second jail: check every hour" >> /etc/fail2ban/jail.local
@@ -110,45 +128,46 @@ echo "maxretry = 20" >> /etc/fail2ban/jail.local
 echo "findtime = 60" >> /etc/fail2ban/jail.local
 echo "#bantime = 3600" >> /etc/fail2ban/jail.local
 echo "bantime = -1" >> /etc/fail2ban/jail.local
-echo "logpath = /var/log/nginx/access.log" >> /etc/fail2ban/jail.local
+echo "logpath = %(nginx_access_log)s" >> /etc/fail2ban/jail.local
+echo "          %(apache_access_log)s" >> /etc/fail2ban/jail.local
 echo "" >> /etc/fail2ban/jail.local
-#echo "[http2]" >> /etc/fail2ban/jail.local
-#echo "enabled = true" >> /etc/fail2ban/jail.local
-#echo "port = https" >> /etc/fail2ban/jail.local
-#echo "filter = http2" >> /etc/fail2ban/jail.local
-#echo "action = %(action_mwl)s" >> /etc/fail2ban/jail.local
-#echo "maxretry = 20" >> /etc/fail2ban/jail.local
-#echo "findtime = 60" >> /etc/fail2ban/jail.local
-#echo "#bantime = 3600" >> /etc/fail2ban/jail.local
-#echo "bantime = -1" >> /etc/fail2ban/jail.local
-#echo "logpath = /var/log/nginx/access.log" >> /etc/fail2ban/jail.local
+##echo "[http2]" >> /etc/fail2ban/jail.local
+##echo "enabled = true" >> /etc/fail2ban/jail.local
+##echo "port = https" >> /etc/fail2ban/jail.local
+##echo "filter = http2" >> /etc/fail2ban/jail.local
+##echo "action = %(action_mwl)s" >> /etc/fail2ban/jail.local
+##echo "maxretry = 20" >> /etc/fail2ban/jail.local
+##echo "findtime = 60" >> /etc/fail2ban/jail.local
+##echo "#bantime = 3600" >> /etc/fail2ban/jail.local
+##echo "bantime = -1" >> /etc/fail2ban/jail.local
+##echo "logpath = /var/log/nginx/access.log" >> /etc/fail2ban/jail.local
 
 
-#sed -i 's/banaction = firewallcmd-ipset[actiontype=<multiport>]/#banaction = firewallcmd-ipset[actiontype=<multiport>]/g' /etc/fail2ban/jail.d/00-firewalld.conf
-#sed -i 's/banaction_allports = firewallcmd-ipset[actiontype=<allports>]/#banaction_allports = firewallcmd-ipset[actiontype=<allports>]/g' /etc/fail2ban/jail.d/00-firewalld.conf
+##sed -i 's/banaction = firewallcmd-ipset[actiontype=<multiport>]/#banaction = firewallcmd-ipset[actiontype=<multiport>]/g' /etc/fail2ban/jail.d/00-firewalld.conf
+##sed -i 's/banaction_allports = firewallcmd-ipset[actiontype=<allports>]/#banaction_allports = firewallcmd-ipset[actiontype=<allports>]/g' /etc/fail2ban/jail.d/00-firewalld.conf
 echo "" >> /etc/fail2ban/jail.d/00-firewalld.conf
 echo "#actionban = firewall-cmd --add-source=<ip> --zone=drop && firewall-cmd --add-source=<ip> --zone=drop --permanent" >> /etc/fail2ban/jail.d/00-firewalld.conf
 echo "#actionunban = firewall-cmd --remove-source=<ip> --zone=drop && firewall-cmd --remove-source=<ip> --zone=drop --permanent" >> /etc/fail2ban/jail.d/00-firewalld.conf
 
-touch /etc/fail2ban/jail.d/firewallcmd.conf
+# touch /etc/fail2ban/jail.d/firewallcmd.conf
 
-echo "[INCLUDES]" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "before =" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "[Definition]" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "actionstart = firewall-cmd --permanent --new-ipset=fail2ban-<name> --type=hash:ip --option=timeout=<bantime>" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "              firewall-cmd --reload" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "actionstop = firewall-cmd --permanent --delete-ipset=fail2ban-<name>" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "             firewall-cmd --reload" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "             ipset flush fail2ban-<name>" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "             ipset destroy fail2ban-<name>" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "actionban = ipset add fail2ban-<name> <ip> timeout <bantime> -exist" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
-echo "actionunban = ipset del fail2ban-<name> <ip> -exist" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "[INCLUDES]" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "before =" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "[Definition]" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "actionstart = firewall-cmd --permanent --new-ipset=fail2ban-<name> --type=hash:ip --option=timeout=<bantime>" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "              firewall-cmd --reload" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "actionstop = firewall-cmd --permanent --delete-ipset=fail2ban-<name>" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "             firewall-cmd --reload" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "             ipset flush fail2ban-<name>" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "             ipset destroy fail2ban-<name>" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "actionban = ipset add fail2ban-<name> <ip> timeout <bantime> -exist" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "" >> /etc/fail2ban/jail.d/firewallcmd.conf
+# echo "actionunban = ipset del fail2ban-<name> <ip> -exist" >> /etc/fail2ban/jail.d/firewallcmd.conf
 
 touch /etc/fail2ban/filter.d/http.conf
 #touch /etc/fail2ban/filter.d/http2.conf
