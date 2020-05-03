@@ -17,7 +17,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 29/04/2020 15:53:09
- # @last modified     : 30/04/2020 16:46:30
+ # @last modified     : 03/05/2020 16:43:05
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -55,6 +55,7 @@ GIT_REMINDER_PATH="/etc/gitreminder"
 GIT="$GIT_REMINDER_PATH/git"
 EMAIL_LIST="$GIT_REMINDER_PATH/email"
 
+################################################################
 
 if [ -f $GIT_REMINDER_PATH/reminder.conf ]; then
     . $GIT_REMINDER_PATH/reminder.conf
@@ -191,12 +192,15 @@ check(){
         if [ "$log" == "" ]; then
             for emailhost in $(cat $EMAIL_LIST | grep "$GITproj:"); do
                 email=$(echo $emailhost | cut -d":" -f3)
+                subject=""
 
                 if [ ! "$email" == "" ]; then
                     if [ ! "$lastupdate" == "" ]; then
-                        date_str="The last update date is on $lastupdate"
+                        subject="GIT reminder"
+                        date_str="The project has over $DAYS days not updated, usually should update it within $days days.  The last update date is on $lastupdate"
                     else
-                        date_str="However, the project is never updated"
+                        subject="GIT ALERT"
+                        date_str="This is empty GIT project.  From creation date until today has never been uploaded any files to GIT."
                     fi
 
                     from=$(echo $lastupdate | cut -d" " -f1)
@@ -208,11 +212,11 @@ check(){
 
                     DAYS=$((($END_DATE - $START_DATE) / 86400 ))
                     
-                    msg="Dear $email,<br><br>$GITproj<br><br>The project has over $DAYS days not updated, usually should update it within $days days.  $date_str .<br><br>Please PUSH your files to GIT immediately if you have modified source codes.<br><br>Thank you."
+                    msg="Dear $email,<br><br>$GITproj<br><br>$date_str .<br><br>Please PUSH your files to GIT immediately if you have modified source codes.<br><br>Thank you."
 
                     if [ ! "$2" == "" ]; then
                         if [ "$2" == "$email" ]; then
-                            php /usr/local/lib/phpmailer/send.php $email "GIT reminder ($today) - $GITproj" "$msg" $EMAIL_CC
+                            php /usr/local/lib/phpmailer/send.php $email "$subject ($today) - $GITproj" "$msg" $EMAIL_CC
                         fi
                     else
                         php /usr/local/lib/phpmailer/send.php $email "GIT reminder ($today) - $GITproj" "$msg" $EMAIL_CC
