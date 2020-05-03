@@ -17,7 +17,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 29/04/2020 15:53:09
- # @last modified     : 03/05/2020 16:43:05
+ # @last modified     : 03/05/2020 16:54:25
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -195,14 +195,6 @@ check(){
                 subject=""
 
                 if [ ! "$email" == "" ]; then
-                    if [ ! "$lastupdate" == "" ]; then
-                        subject="GIT reminder"
-                        date_str="The project has over $DAYS days not updated, usually should update it within $days days.  The last update date is on $lastupdate"
-                    else
-                        subject="GIT ALERT"
-                        date_str="This is empty GIT project.  From creation date until today has never been uploaded any files to GIT."
-                    fi
-
                     from=$(echo $lastupdate | cut -d" " -f1)
                     from=`echo $from | awk  -F\/ '{print $3$2$1}'`
                     to=`echo $today | awk  -F\/ '{print $3$2$1}'`
@@ -211,6 +203,14 @@ check(){
                     END_DATE=`date --date=$to +"%s"`
 
                     DAYS=$((($END_DATE - $START_DATE) / 86400 ))
+
+                    if [ ! "$lastupdate" == "" ]; then
+                        subject="GIT reminder"
+                        date_str="The project has over $DAYS days not updated, usually should update it within $days days.  The last update date is on $lastupdate"
+                    else
+                        subject="GIT ALERT"
+                        date_str="This is an empty GIT project.  From creation date until today has never been uploaded any files to GIT."
+                    fi
                     
                     msg="Dear $email,<br><br>$GITproj<br><br>$date_str .<br><br>Please PUSH your files to GIT immediately if you have modified source codes.<br><br>Thank you."
 
