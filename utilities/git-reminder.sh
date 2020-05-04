@@ -17,7 +17,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 29/04/2020 15:53:09
- # @last modified     : 04/05/2020 09:41:26
+ # @last modified     : 04/05/2020 09:43:46
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -206,11 +206,16 @@ check(){
 
                     if [ ! "$lastupdate" == "" ]; then
                         subject="GIT reminder"
-                        date_str="The project has over $DAYS days not updated, usually should update it within $days days.  The last update date is on $lastupdate"
+
+                        if [ $DAYS -ge 30 ]; then
+                            subject="GIT ALERT"
+                        fi
+
+                        date_str="The project has $DAYS days not updated, usually should update it within $days days.  The last update date is on $lastupdate"
                     else
                         # commit_info=$(git for-each-ref --format='%(committerdate) %09 %(authorname) %09 %(refname)' --sort='-committerdate')
                         subject="GIT ALERT"
-                        date_str="This is an empty GIT project.  From creation date until today has never been uploaded any files to GIT."
+                        date_str="This is an empty GIT project.  From creation date until today has never been uploaded any files to GIT"
                     fi
                     
                     msg="Dear $email,<br><br>$GITproj<br><br>$date_str .<br><br>Please PUSH your files to GIT immediately if you have modified source codes.<br><br>Thank you."
