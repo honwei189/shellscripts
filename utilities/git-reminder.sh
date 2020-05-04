@@ -17,7 +17,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 29/04/2020 15:53:09
- # @last modified     : 03/05/2020 16:54:25
+ # @last modified     : 04/05/2020 09:41:26
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -208,6 +208,7 @@ check(){
                         subject="GIT reminder"
                         date_str="The project has over $DAYS days not updated, usually should update it within $days days.  The last update date is on $lastupdate"
                     else
+                        # commit_info=$(git for-each-ref --format='%(committerdate) %09 %(authorname) %09 %(refname)' --sort='-committerdate')
                         subject="GIT ALERT"
                         date_str="This is an empty GIT project.  From creation date until today has never been uploaded any files to GIT."
                     fi
@@ -219,7 +220,7 @@ check(){
                             php /usr/local/lib/phpmailer/send.php $email "$subject ($today) - $GITproj" "$msg" $EMAIL_CC
                         fi
                     else
-                        php /usr/local/lib/phpmailer/send.php $email "GIT reminder ($today) - $GITproj" "$msg" $EMAIL_CC
+                        php /usr/local/lib/phpmailer/send.php $email "$subject ($today) - $GITproj" "$msg" $EMAIL_CC
                     fi
                     
                     # php << EOF
