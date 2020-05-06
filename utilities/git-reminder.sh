@@ -17,7 +17,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 29/04/2020 15:53:09
- # @last modified     : 06/05/2020 10:52:52
+ # @last modified     : 06/05/2020 11:01:32
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -215,12 +215,25 @@ check(){
                             subject="GIT ALERT"
                         fi
 
+                        if [ $DAYS -ge 60 ]; then
+                            subject="GIT WARNING"
+                        fi
+
                         subject="$subject ($today, $DAYS days not updated) - "
 
                         date_str="The project has $DAYS days not updated, usually should update it within $days days.  The last update date is on $lastupdate"
                     else
                         # commit_info=$(git for-each-ref --format='%(committerdate) %09 %(authorname) %09 %(refname)' --sort='-committerdate')
                         subject="GIT ALERT"
+
+                        if [ $DAYS -ge 30 ]; then
+                            subject="GIT ALERT"
+                        fi
+
+                        if [ $DAYS -ge 60 ]; then
+                            subject="GIT WARNING"
+                        fi
+                        
                         subject="$subject ($today, never updated) - "
                         date_str="This is an empty GIT project.  From creation date until today has never been uploaded any files to GIT"
                     fi
