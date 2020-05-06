@@ -17,7 +17,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 29/04/2020 15:53:09
- # @last modified     : 06/05/2020 11:01:32
+ # @last modified     : 06/05/2020 21:10:58
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -56,6 +56,18 @@ GIT="$GIT_REMINDER_PATH/git"
 EMAIL_LIST="$GIT_REMINDER_PATH/email"
 
 ################################################################
+
+if [ ! -f $GIT_REMINDER_PATH/pausedates ]; then
+    touch $GIT_REMINDER_PATH/pausedates
+    echo "#Dates to pause send email" >> $GIT_REMINDER_PATH/pausedates
+    echo "#Format : MM-DD" >> $GIT_REMINDER_PATH/pausedates
+    echo "#Example:" >> $GIT_REMINDER_PATH/pausedates
+    echo "#" >> $GIT_REMINDER_PATH/pausedates
+    echo "#01-01" >> $GIT_REMINDER_PATH/pausedates
+    echo "#05-07" >> $GIT_REMINDER_PATH/pausedates
+    echo "#" >> $GIT_REMINDER_PATH/pausedates
+    echo "" >> $GIT_REMINDER_PATH/pausedates
+fi
 
 if [ -f $GIT_REMINDER_PATH/reminder.conf ]; then
     . $GIT_REMINDER_PATH/reminder.conf
@@ -168,6 +180,7 @@ check(){
     fromdate=$(date +"%Y-%m-%d" --date="$days days ago")
     todate=$(date +"%Y-%m-%d")
     today=$(date +"%d/%m/%Y")
+    monthday=$(date +"%m-%d")
     pwd="$GIT_USER:$GIT_PASSWORD@"
 
     if [ ! "$1" == "" ];then
@@ -246,19 +259,31 @@ check(){
                     
                     msg="Dear $email,<br><br>$GITproj<br><br>$date_str .<br>$update_msg<br>Please PUSH your files to GIT immediately if you have modified source codes.<br><br>Thank you."
 
-                    if [ ! "$2" == "" ]; then
-                        if [ "$2" == "$email" ]; then
+                    send_email=1
+
+                    if [ -f $GIT_REMINDER_PATH/pausedates ]; then
+                        pausedate=$(cat "$GIT_REMINDER_PATH/pausedates" | grep "$monthday")
+
+                        if [ ! "$pausedate" == "" ]; then
+                            send_email=0
+                        fi
+                    fi
+
+                    if [ $send_email -eq 1 ]; then
+                        if [ ! "$2" == "" ]; then
+                            if [ "$2" == "$email" ]; then
+                                php /usr/local/lib/phpmailer/send.php $email "$subject $GITproj" "$msg" $EMAIL_CC
+                            fi
+                        else
                             php /usr/local/lib/phpmailer/send.php $email "$subject $GITproj" "$msg" $EMAIL_CC
                         fi
-                    else
-                        php /usr/local/lib/phpmailer/send.php $email "$subject $GITproj" "$msg" $EMAIL_CC
+                        
+                        # php << EOF
+                        #     <?php
+                        #       mail("$email", "GIT reminder (".date("d/m/Y"). ") - $GITproj", "$msg", "$EMAIL_HEADERS");
+                        #     ?>
+                        # EOF
                     fi
-                    
-                    # php << EOF
-                    #     <?php
-                    #       mail("$email", "GIT reminder (".date("d/m/Y"). ") - $GITproj", "$msg", "$EMAIL_HEADERS");
-                    #     ?>
-                    # EOF
                 fi
             done
         fi
