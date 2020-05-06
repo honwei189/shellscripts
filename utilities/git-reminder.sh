@@ -17,7 +17,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 29/04/2020 15:53:09
- # @last modified     : 04/05/2020 09:47:33
+ # @last modified     : 06/05/2020 10:52:52
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -184,7 +184,11 @@ check(){
         pushd "$tmpdir" >/dev/null 2>&1 || exit 1
         git clone --depth=1 -n "$GIT_url" .  >/dev/null 2>&1
         log=$(git log --after=$fromdate --until=$todate)
-        lastupdate=$(git log -1 --format="%at" | xargs -I{} date -d @{} +"%d/%m/%Y %H:%M:%S")
+        #lastupdate=$(git log -1 --format="%at" | xargs -I{} date -d @{} +"%d/%m/%Y %H:%M:%S")
+        lastupdate=$(git for-each-ref --format='%(committerdate)' --sort='-committerdate' --count 1)
+        lastupdate=$(echo "$lastupdate" | sed 's/+.*$//g' | xargs -I{} date -d {} +"%d/%m/%Y %H:%M:%S")
+        lastupdateby=$(git for-each-ref --format='%(authorname)' --sort='-committerdate' --count 1)
+        lastupdatesubject=$(git for-each-ref --format='%(subject)' --sort='-committerdate' --count 1)
         popd >/dev/null 2>&1
 
         rm -rf "$tmpdir"
@@ -220,8 +224,14 @@ check(){
                         subject="$subject ($today, never updated) - "
                         date_str="This is an empty GIT project.  From creation date until today has never been uploaded any files to GIT"
                     fi
+
+                    if [ ! "$lastupdateby" == "" ] || [ ! "$lastupdatesubject" == "" ]; then
+                        update_msg="<br><hr>Update by : $lastupdateby<br>Update message: $lastupdatesubject<hr><br>"
+                    else
+                        update_msg=""
+                    fi
                     
-                    msg="Dear $email,<br><br>$GITproj<br><br>$date_str .<br><br>Please PUSH your files to GIT immediately if you have modified source codes.<br><br>Thank you."
+                    msg="Dear $email,<br><br>$GITproj<br><br>$date_str .<br>$update_msg<br>Please PUSH your files to GIT immediately if you have modified source codes.<br><br>Thank you."
 
                     if [ ! "$2" == "" ]; then
                         if [ "$2" == "$email" ]; then
