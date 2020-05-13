@@ -1,11 +1,11 @@
 #!/bin/sh
 ###
- # @description       : Update files from GIT
+ # @description       : Allows to get latest files from GIT and allows to skip update certains file
  # @usage             : update
  # @version           : "1.0.0"
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 12/05/2020 16:06:05
- # @last modified     : 13/05/2020 14:54:25
+ # @last modified     : 13/05/2020 14:58:49
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
