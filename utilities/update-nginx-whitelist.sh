@@ -1,24 +1,36 @@
 #!/bin/bash
 ###
-# @description       : Grant certains IPs / dynamic hosts name to access some restriction site.
-#                      And to renew whitelist for NginX (map method).
-#                      This supports check against x-forward-ip,
-#                      to prevent inaccidentaly deny all incoming ips from cloudflare
-# @version           : "1.0.0"
-# @creator           : Gordon Lim <honwei189@gmail.com>
-# @created           : 14/04/2020 13:43:30
- # @last modified     : 13/05/2020 16:46:50
-# @last modified by  : Gordon Lim <honwei189@gmail.com>
+ # @description       : Grant certains IPs / dynamic hosts name to access some restriction site.
+ #                      And to renew whitelist for NGINX (map method).
+ #                      This supports check against x-forward-ip,
+ #                      to prevent inaccidentaly deny all incoming ips from cloudflare
+ # @version           : "1.1.0"
+ # @creator           : Gordon Lim <honwei189@gmail.com>
+ # @created           : 14/04/2020 13:43:30
+ # @last modified     : 13/05/2020 16:56:49
+ # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
-#cron job:
-#0 * * * *	sh update-nginx-whitelist.sh >/dev/null 2>&1
+################################# INSTALLATION ################################
+# Make sure that "/usr/bin/nginx-whitelist" doesn't exist
 #
-#nginx config
-#e.g:
+# ln -s update-nginx-whitelist.sh /usr/bin/nginx-whitelist
+# or;
+# mv update-nginx-whitelist.sh /usr/bin/nginx-whitelist
+#
+# chmod +x /usr/bin/nginx-whitelist
+#
+# cron job:
+# 0 * * * *	/usr/bin/nginx-whitelist update >/dev/null 2>&1
+#
+# nginx config
+# e.g:
 #    location / {
 #        include conf.d/server/check_white_ip.conf;
 #    }
+#
+###############################################################################
+
 
 ################################################################
 # (DO NOT CHANGE)
