@@ -1,0 +1,30 @@
+# Block cloud/vps companies. Services are often abused to run attack scripts against proxied websites.
+include /usr/local/etc/nginx/security/hosting-networks.conf;
+
+# Block hostile countries / Anonymouse proxies/Vpn's
+include /usr/local/etc/nginx/security/blocked-countries.conf;
+
+# Generic Security
+include /usr/local/etc/nginx/security/generic-security.conf;
+
+# Set Headers
+include /usr/local/etc/nginx/security/cache-status.conf;
+include /usr/local/etc/nginx/security/no-sniff.conf;
+include /usr/local/etc/nginx/security/ie-xss.conf;
+include /usr/local/etc/nginx/security/block-frames.conf;
+
+# Spiders / Bots
+include /usr/local/etc/nginx/security/block-blockedbots.conf;
+include /usr/local/etc/nginx/security/block-devtools.conf;
+include /usr/local/etc/nginx/security/block-scanners.conf;
+include /usr/local/etc/nginx/security/block-dataaggregators.conf;
+include /usr/local/etc/nginx/security/block-monitoring.conf;
+
+# Block Bad Referers
+include /usr/local/etc/nginx/security/block-referer.conf;
+
+# Block fake search engine traffic.
+include /usr/local/etc/nginx/security/block-fakegoogle.conf;
+include /usr/local/etc/nginx/security/block-fakebing.conf;
+include /usr/local/etc/nginx/security/block-fakebaidu.conf;
+
