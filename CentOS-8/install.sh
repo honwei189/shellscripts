@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 25/04/2020 16:36:35
+ # @last modified     : 17/05/2020 15:33:08
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 /usr/sbin/setenforce 0 2>&1 >/dev/null
@@ -374,7 +374,7 @@ else
     if [ ! -z "$var_password" ]
     then
         egrep "^$username" /etc/passwd >/dev/null
-        if [ $? -eq 0 ]; then
+        if [ ! $? -eq 0 ]; then
                 echo ""
                 echo ""
                 echo "user '$var_username' already exists"
