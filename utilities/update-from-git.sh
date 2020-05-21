@@ -5,7 +5,7 @@
  # @version           : "1.1.0"
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 12/05/2020 16:06:05
- # @last modified     : 20/05/2020 16:02:09
+ # @last modified     : 21/05/2020 13:25:31
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
@@ -38,6 +38,7 @@ if [[ -d $pwd/.git ]]; then
     LAST_UPDATE_DATE_TIME=$(git for-each-ref --format='%(committerdate)' --sort='-committerdate' --count 1)
     LAST_UPDATE_DATE_ONLY=$(echo "$LAST_UPDATE_DATE_TIME" | sed 's/+.*$//g' | xargs -I{} date -d {} +"%Y-%m-%d")
     LAST_UPDATE_DATE_TIME=$(echo "$LAST_UPDATE_DATE_TIME" | sed 's/+.*$//g' | xargs -I{} date -d {} +"%d/%m/%Y %H:%M:%S")
+    TODAY=$(date +"%Y-%m-%d")
 
     #Store userid passsword for 1 min
     git config credential.helper store
@@ -138,6 +139,10 @@ update() {
         fi
 
         git pull
+
+        if [[ ! "$TODAY" == "$LAST_UPDATE_DATE_ONLY" ]];then
+            LAST_UPDATE_DATE_ONLY=$TODAY;
+        fi
 
         changelog
     else
