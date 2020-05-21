@@ -5,7 +5,7 @@
  # @version           : "1.1.0"
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 12/05/2020 16:06:05
- # @last modified     : 21/05/2020 13:25:31
+ # @last modified     : 21/05/2020 14:05:47
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
@@ -30,50 +30,52 @@ SETCOLOR_FAILURE="echo -en \\033[1;31m"
 SETCOLOR_WARNING="echo -en \\033[1;33m"
 SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
-if [[ -d $pwd/.git ]]; then
-    # LAST_UPDATE=`git show --no-notes --format=format:"%H" | head -n 1`
-    # LAST_COMMIT=`git show --no-notes --format=format:"%H" | head -n 1`
-    LAST_UPDATE=$(git rev-parse HEAD)
-    LAST_COMMIT=$(git ls-remote $(git rev-parse --abbrev-ref @{u} | sed 's/\// /g') | cut -f1)
-    LAST_UPDATE_DATE_TIME=$(git for-each-ref --format='%(committerdate)' --sort='-committerdate' --count 1)
-    LAST_UPDATE_DATE_ONLY=$(echo "$LAST_UPDATE_DATE_TIME" | sed 's/+.*$//g' | xargs -I{} date -d {} +"%Y-%m-%d")
-    LAST_UPDATE_DATE_TIME=$(echo "$LAST_UPDATE_DATE_TIME" | sed 's/+.*$//g' | xargs -I{} date -d {} +"%d/%m/%Y %H:%M:%S")
-    TODAY=$(date +"%Y-%m-%d")
+check_git_dir(){
+    if [[ -d $pwd/.git ]] && [[ -f $pwd/.git/config ]]; then
+        # LAST_UPDATE=`git show --no-notes --format=format:"%H" | head -n 1`
+        # LAST_COMMIT=`git show --no-notes --format=format:"%H" | head -n 1`
+        LAST_UPDATE=$(git rev-parse HEAD)
+        LAST_COMMIT=$(git ls-remote $(git rev-parse --abbrev-ref @{u} | sed 's/\// /g') | cut -f1)
+        LAST_UPDATE_DATE_TIME=$(git for-each-ref --format='%(committerdate)' --sort='-committerdate' --count 1)
+        LAST_UPDATE_DATE_ONLY=$(echo "$LAST_UPDATE_DATE_TIME" | sed 's/+.*$//g' | xargs -I{} date -d {} +"%Y-%m-%d")
+        LAST_UPDATE_DATE_TIME=$(echo "$LAST_UPDATE_DATE_TIME" | sed 's/+.*$//g' | xargs -I{} date -d {} +"%d/%m/%Y %H:%M:%S")
+        TODAY=$(date +"%Y-%m-%d")
 
-    #Store userid passsword for 1 min
-    git config credential.helper store
-    git config credential.helper 'cache --timeout=60'
-else
-    echo ""
-    $SETCOLOR_FAILURE
-    echo -en "Unable to update files from GIT repository, because of "
-    $SETCOLOR_SUCCESS
-    echo -en $pwd
-    $SETCOLOR_FAILURE
-    echo -en " is not a git repository directory"
-    $SETCOLOR_NORMAL
-    echo ""
-    echo ""
-    exit 1
-fi
+        #Store userid passsword for 1 min
+        git config credential.helper store
+        git config credential.helper 'cache --timeout=60'
+    else
+        echo ""
+        $SETCOLOR_FAILURE
+        echo -en "Unable to update files from GIT repository, because of "
+        $SETCOLOR_SUCCESS
+        echo -en $pwd
+        $SETCOLOR_FAILURE
+        echo -en " is not a git repository directory"
+        $SETCOLOR_NORMAL
+        echo ""
+        echo ""
+        exit 1
+    fi
 
-# UPSTREAM=${1:-'@{u}'}
-# LOCAL=$(git rev-parse @)
-# REMOTE=$(git rev-parse "$UPSTREAM")
-# BASE=$(git merge-base @ "$UPSTREAM")
+    # UPSTREAM=${1:-'@{u}'}
+    # LOCAL=$(git rev-parse @)
+    # REMOTE=$(git rev-parse "$UPSTREAM")
+    # BASE=$(git merge-base @ "$UPSTREAM")
 
-# [ $(git rev-parse HEAD) = $(git ls-remote $(git rev-parse --abbrev-ref @{u} | \
-# sed 's/\// /g') | cut -f1) ] && echo up to date || echo not up to date
+    # [ $(git rev-parse HEAD) = $(git ls-remote $(git rev-parse --abbrev-ref @{u} | \
+    # sed 's/\// /g') | cut -f1) ] && echo up to date || echo not up to date
 
-# if [ $LOCAL = $REMOTE ]; then
-#     echo "Up-to-date"
-# elif [ $LOCAL = $BASE ]; then
-#     echo "Need to pull"
-# elif [ $REMOTE = $BASE ]; then
-#     echo "Need to push"
-# else
-#     echo "Diverged"
-# fi
+    # if [ $LOCAL = $REMOTE ]; then
+    #     echo "Up-to-date"
+    # elif [ $LOCAL = $BASE ]; then
+    #     echo "Need to pull"
+    # elif [ $REMOTE = $BASE ]; then
+    #     echo "Need to push"
+    # else
+    #     echo "Diverged"
+    # fi
+}
 
 changelog() {
     if [ "$1" == "" ]; then
@@ -201,6 +203,7 @@ help() {
 
 case "$1" in
 log)
+    check_git_dir
     changelog $2
     ;;
 -h)
@@ -213,6 +216,7 @@ log)
     help
     ;;
 *)
+    check_git_dir
     update
     ;;
 esac
