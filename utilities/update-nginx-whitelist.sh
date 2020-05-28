@@ -7,7 +7,7 @@
  # @version           : "1.1.0"
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 14/04/2020 13:43:30
- # @last modified     : 13/05/2020 16:56:49
+ # @last modified     : 28/05/2020 15:35:13
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
@@ -153,75 +153,101 @@ add() {
 }
 
 update() {
-    if [ -f $WHITELIST_CONF_MAP_FILE ]; then
-        cat /dev/null >$WHITELIST_CONF_MAP_FILE
-    else
-        touch $WHITELIST_CONF_MAP_FILE
-    fi
-
     hosts=$(cat $NGINX_WHITELIST/hosts | egrep -v '^(;|#|//|$)')
     ips=$(cat $NGINX_WHITELIST/ip | egrep -v '^(;|#|//|$)')
-
-    #echo "  #set \$realip \$remote_addr;" >> $WHITELIST_CONF_MAP_FILE
-    #echo "  #if (\$http_x_forwarded_for ~ \"^(\d+\.\d+\.\d+\.\d+)\") {" >> $WHITELIST_CONF_MAP_FILE
-    #echo "  #   set \$realip \$1;" >> $WHITELIST_CONF_MAP_FILE
-    #echo "  #}" >> $WHITELIST_CONF_MAP_FILE
-    #echo "  " >> $WHITELIST_CONF_MAP_FILE
-    #echo "  #fastcgi_param REMOTE_ADDR \$realip;" >> $WHITELIST_CONF_MAP_FILE
-    #echo "" >> $WHITELIST_CONF_MAP_FILE
-
-    echo "  map \$http_x_forwarded_for \$real_ip {" >>$WHITELIST_CONF_MAP_FILE
-    echo "      ~^(\d+\.\d+\.\d+\.\d+) \$1;" >>$WHITELIST_CONF_MAP_FILE
-    echo "      default \$remote_addr;" >>$WHITELIST_CONF_MAP_FILE
-    echo "  }" >>$WHITELIST_CONF_MAP_FILE
-
-    echo "" >>$WHITELIST_CONF_MAP_FILE
-    echo "  map \$proxy_add_x_forwarded_for \$real_ip {" >>$WHITELIST_CONF_MAP_FILE
-    echo "      \"~(?<IP>([0-9]{1,3}\.){3}[0-9]{1,3}),.*\" \$IP;" >>$WHITELIST_CONF_MAP_FILE
-    echo "  }" >>$WHITELIST_CONF_MAP_FILE
-
-    echo "" >>$WHITELIST_CONF_MAP_FILE
-    echo "  fastcgi_param   REMOTE_ADDR    \$real_ip;" >>$WHITELIST_CONF_MAP_FILE
-    echo "  #fastcgi_param   REMOTE_ADDR     \$http_x_forwarded_for;" >>$WHITELIST_CONF_MAP_FILE
-
-    echo "" >>$WHITELIST_CONF_MAP_FILE
-    echo "  map \$real_ip \$give_white_ip_access {" >>$WHITELIST_CONF_MAP_FILE
-    echo "      default 0;" >>$WHITELIST_CONF_MAP_FILE
-
-    for ip in $ips; do
-        echo "      $ip 1;" >>$WHITELIST_CONF_MAP_FILE
-    done
+    ipcheck=$ips
+    rewrite=0
 
     for host in $hosts; do
-        ip=$(host $host | awk '/has address/ { print $4 }')
-        echo "      $ip 1;" >>$WHITELIST_CONF_MAP_FILE
-        echo "$host - $ip"
+        _ip=$(host $host | awk '/has address/ { print $4 }')
+        ipcheck="$ipcheck
+        $_ip"
     done
 
-    #for ip in $(curl --silent https://www.cloudflare.com/ips-v4)
-    #do
-    #    echo "      $ip 1;" >> $WHITELIST_CONF_MAP_FILE
-    #done
+    for ip in $ipcheck; do
+        ip="$(echo -e "${ip}" | sed -e 's/^[[:space:]]*//')"
+        find=$(cat $WHITELIST_CONF_MAP_FILE | grep "$ip 1")
+        find="$(echo -e "${find}" | sed -e 's/^[[:space:]]*//')"
 
-    #for ip in $(curl --silent https://www.cloudflare.com/ips-v6)
-    #do
-    #    echo "      $ip 1;" >> $WHITELIST_CONF_MAP_FILE
-    #done
+        if [ "$find" == "" ];then
+            rewrite=1
+            break
+        fi
+    done
 
-    echo "  }" >>$WHITELIST_CONF_MAP_FILE
+    if [ $rewrite -eq 1 ]; then
+        if [ -f $WHITELIST_CONF_MAP_FILE ]; then
+            cat /dev/null >$WHITELIST_CONF_MAP_FILE
+        else
+            touch $WHITELIST_CONF_MAP_FILE
+        fi
 
-    if [ ! -d $NGINX_PATH/conf.d/server ]; then
-        mkdir -p $NGINX_PATH/conf.d/server
+        #echo "  #set \$realip \$remote_addr;" >> $WHITELIST_CONF_MAP_FILE
+        #echo "  #if (\$http_x_forwarded_for ~ \"^(\d+\.\d+\.\d+\.\d+)\") {" >> $WHITELIST_CONF_MAP_FILE
+        #echo "  #   set \$realip \$1;" >> $WHITELIST_CONF_MAP_FILE
+        #echo "  #}" >> $WHITELIST_CONF_MAP_FILE
+        #echo "  " >> $WHITELIST_CONF_MAP_FILE
+        #echo "  #fastcgi_param REMOTE_ADDR \$realip;" >> $WHITELIST_CONF_MAP_FILE
+        #echo "" >> $WHITELIST_CONF_MAP_FILE
+
+        echo "  map \$http_x_forwarded_for \$real_ip {" >>$WHITELIST_CONF_MAP_FILE
+        echo "      ~^(\d+\.\d+\.\d+\.\d+) \$1;" >>$WHITELIST_CONF_MAP_FILE
+        echo "      default \$remote_addr;" >>$WHITELIST_CONF_MAP_FILE
+        echo "  }" >>$WHITELIST_CONF_MAP_FILE
+
+        echo "" >>$WHITELIST_CONF_MAP_FILE
+        echo "  map \$proxy_add_x_forwarded_for \$real_ip {" >>$WHITELIST_CONF_MAP_FILE
+        echo "      \"~(?<IP>([0-9]{1,3}\.){3}[0-9]{1,3}),.*\" \$IP;" >>$WHITELIST_CONF_MAP_FILE
+        echo "  }" >>$WHITELIST_CONF_MAP_FILE
+
+        echo "" >>$WHITELIST_CONF_MAP_FILE
+        echo "  fastcgi_param   REMOTE_ADDR    \$real_ip;" >>$WHITELIST_CONF_MAP_FILE
+        echo "  #fastcgi_param   REMOTE_ADDR     \$http_x_forwarded_for;" >>$WHITELIST_CONF_MAP_FILE
+
+        echo "" >>$WHITELIST_CONF_MAP_FILE
+        echo "  map \$real_ip \$give_white_ip_access {" >>$WHITELIST_CONF_MAP_FILE
+        echo "      default 0;" >>$WHITELIST_CONF_MAP_FILE
+
+        # for ip in $ips; do
+        #     echo "      $ip 1;" >>$WHITELIST_CONF_MAP_FILE
+        # done
+
+        # for host in $hosts; do
+        #     ip=$(host $host | awk '/has address/ { print $4 }')
+        #     echo "      $ip 1;" >>$WHITELIST_CONF_MAP_FILE
+        #     echo "$host - $ip"
+        # done
+
+        for ip in $ipcheck; do
+            ip="$(echo -e "${ip}" | sed -e 's/^[[:space:]]*//')"
+            echo "      $ip 1;" >>$WHITELIST_CONF_MAP_FILE
+        done
+
+        #for ip in $(curl --silent https://www.cloudflare.com/ips-v4)
+        #do
+        #    echo "      $ip 1;" >> $WHITELIST_CONF_MAP_FILE
+        #done
+
+        #for ip in $(curl --silent https://www.cloudflare.com/ips-v6)
+        #do
+        #    echo "      $ip 1;" >> $WHITELIST_CONF_MAP_FILE
+        #done
+
+        echo "  }" >>$WHITELIST_CONF_MAP_FILE
+
+        if [ ! -d $NGINX_PATH/conf.d/server ]; then
+            mkdir -p $NGINX_PATH/conf.d/server
+        fi
+
+        if [ ! -f $NGINX_CHECK_FROM_WHITELIST ]; then
+            echo "        if (\$give_white_ip_access = 0){" >>$NGINX_CHECK_FROM_WHITELIST
+            echo "            return 404;" >>$NGINX_CHECK_FROM_WHITELIST
+            echo "        }" >>$NGINX_CHECK_FROM_WHITELIST
+        fi
+
+        #nginx -s reload
+        service nginx reload
     fi
-
-    if [ ! -f $NGINX_CHECK_FROM_WHITELIST ]; then
-        echo "        if (\$give_white_ip_access = 0){" >>$NGINX_CHECK_FROM_WHITELIST
-        echo "            return 404;" >>$NGINX_CHECK_FROM_WHITELIST
-        echo "        }" >>$NGINX_CHECK_FROM_WHITELIST
-    fi
-
-    #nginx -s reload
-    service nginx reload
 }
 
 delete() {
