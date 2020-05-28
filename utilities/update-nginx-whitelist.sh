@@ -7,7 +7,7 @@
  # @version           : "1.1.0"
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 14/04/2020 13:43:30
- # @last modified     : 28/05/2020 15:35:13
+ # @last modified     : 28/05/2020 15:37:13
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
@@ -248,6 +248,11 @@ update() {
         #nginx -s reload
         service nginx reload
     fi
+
+    hosts=""
+    ips=""
+    ipcheck=""
+    rewrite=""
 }
 
 delete() {
