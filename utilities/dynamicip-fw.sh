@@ -14,7 +14,7 @@
  # @version           : "1.0.0"
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 25/04/2020 12:27:17
- # @last modified     : 30/04/2020 11:36:12
+ # @last modified     : 29/05/2020 16:50:38
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
@@ -250,7 +250,7 @@ refresh() {
     done
 
     if [ $restart_fw -eq 1 ]; then
-        firewall-cmd --refresh
+        firewall-cmd --reload
     fi
 }
 
