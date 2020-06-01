@@ -250,7 +250,7 @@ refresh() {
     done
 
     if [ $restart_fw -eq 1 ]; then
-        firewall-cmd --reload
+        sudo firewall-cmd --reload
     fi
 }
 

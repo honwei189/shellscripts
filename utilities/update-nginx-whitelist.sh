@@ -7,7 +7,7 @@
  # @version           : "1.1.0"
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 14/04/2020 13:43:30
- # @last modified     : 28/05/2020 15:37:13
+ # @last modified     : 01/06/2020 13:12:40
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
@@ -245,8 +245,8 @@ update() {
             echo "        }" >>$NGINX_CHECK_FROM_WHITELIST
         fi
 
-        #nginx -s reload
-        service nginx reload
+        sudo nginx -s reload
+        sudo service nginx reload
     fi
 
     hosts=""
