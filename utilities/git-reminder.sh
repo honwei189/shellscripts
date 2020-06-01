@@ -17,7 +17,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 29/04/2020 15:53:09
- # @last modified     : 06/05/2020 21:10:58
+ # @last modified     : 01/06/2020 15:56:34
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -195,7 +195,8 @@ check(){
         GIT_url=$(echo $GITproj | sed -e "s/:\/\//:\/\/${pwd}/g")
         
         pushd "$tmpdir" >/dev/null 2>&1 || exit 1
-        git clone --depth=1 -n "$GIT_url" .  >/dev/null 2>&1
+        # git clone --depth=1 -n "$GIT_url" .  >/dev/null 2>&1
+        git clone --bare "$GIT_url" .  >/dev/null 2>&1
         log=$(git log --after=$fromdate --until=$todate)
         #lastupdate=$(git log -1 --format="%at" | xargs -I{} date -d @{} +"%d/%m/%Y %H:%M:%S")
         lastupdate=$(git for-each-ref --format='%(committerdate)' --sort='-committerdate' --count 1)
