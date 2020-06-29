@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 05/04/2020 13:51:23
+ # @last modified     : 29/06/2020 09:49:07
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -23,6 +23,9 @@ curl -L https://github.com/honwei189/shellscripts/raw/master/utilities/gen_cert.
 dnf -y install libxml2 libxml2-dev
 dnf -y install libxslt-devel
 
+#Install via use yum if libxml2-dev not found
+yum -y install libxml2-devel
+
 #Install library for nginx (HTTP image filter module requires the GD library)
 dnf -y install gd-devel
 
@@ -30,6 +33,7 @@ dnf -y install gd-devel
 #Install library for nginx (perl module ExtUtils::Embed is required)
 dnf -y install perl-devel perl-ExtUtils-Embed
 
+mkdir -p /usr/local/src/nginx/modules/
 
 cd /usr/local/src/nginx/modules/
 git clone https://github.com/leev/ngx_http_geoip2_module.git
@@ -66,9 +70,9 @@ git clone https://github.com/leev/ngx_http_geoip2_module.git
 
 
 cd /usr/local/src/
-wget https://www.openssl.org/source/openssl-1.1.0l.tar.gz
-tar -zxf openssl-1.1.0l.tar.gz
-cd openssl-1.1.0l
+wget https://www.openssl.org/source/openssl-1.1.1g.tar.gz
+tar -zxf openssl-1.1.1g.tar.gz
+cd openssl-1.1.1g
 ./config
 
 make
@@ -78,9 +82,9 @@ make
 
 
 cd /usr/local/src/
-wget ftp://ftp.pcre.org/pub/pcre/pcre-8.43.tar.gz
-tar -zxf pcre-8.43.tar.gz
-cd pcre-8.43
+wget ftp://ftp.pcre.org/pub/pcre/pcre-8.44.tar.gz
+tar -zxf pcre-8.44.tar.gz
+cd pcre-8.44
 #./configure
 ./configure --prefix=/usr --libdir=/usr/lib64 --enable-unicode-properties --enable-pcre16 --enable-pcre32 --enable-pcregrep-libz --disable-static --enable-utf8 --enable-shared
 make
@@ -102,10 +106,10 @@ make
 
 
 cd /usr/local/src/
-curl -O http://nginx.org/download/nginx-1.17.9.tar.gz
-tar xvzf nginx-1.17.9.tar.gz
+curl -O http://nginx.org/download/nginx-1.18.0.tar.gz
+tar xvzf nginx-1.18.0.tar.gz
 ln -s /usr/lib64/nginx/modules /etc/nginx/
-cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.17.9
+cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.18.0
 mkdir -p /var/cache/nginx/client_temp
 mkdir -p /etc/nginx
 
