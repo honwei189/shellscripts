@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 29/06/2020 09:49:07
+ # @last modified     : 03/08/2020 20:27:15
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -106,10 +106,10 @@ make
 
 
 cd /usr/local/src/
-curl -O http://nginx.org/download/nginx-1.18.0.tar.gz
-tar xvzf nginx-1.18.0.tar.gz
+curl -O http://nginx.org/download/nginx-1.19.1.tar.gz
+tar xvzf nginx-1.19.1.tar.gz
 ln -s /usr/lib64/nginx/modules /etc/nginx/
-cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.18.0
+cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.19.1
 mkdir -p /var/cache/nginx/client_temp
 mkdir -p /etc/nginx
 
