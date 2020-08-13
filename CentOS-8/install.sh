@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 17/05/2020 15:33:08
+ # @last modified     : 13/08/2020 21:11:02
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 /usr/sbin/setenforce 0 2>&1 >/dev/null
@@ -65,6 +65,8 @@ dnf install GeoIP GeoIP-devel GeoIP-data -y
 #dnf install -y php php-fpm php-cli php-opcache php-common php-mysql php-pdo php-curl php-dom php-simplexml php-xml php-xmlrpc php-xmlreader php-curl php-date php-exif php-filter php-ftp php-gd php-hash php-iconv php-json php-libxml php-pecl-imagick php-mbstring php-mysqlnd php-openssl php-pcre php-posix php-sockets php-spl php-tokenizer php-zlib
 dnf install -y php php-fpm php-cli php-json php-common php-mysql php-pdo php-curl php-dom php-simplexml php-xml php-xmlrpc php-xmlreader php-curl php-date php-exif php-filter php-ftp php-gd php-hash php-iconv php-json php-libxml php-pecl-imagick php-mbstring php-mysqlnd php-openssl php-pcre php-posix php-sockets php-spl php-tokenizer php-zlib
 dnf install mysql mysql-server -y
+
+dnf install libyaml* php80-php-pecl-yaml php80-php-pecl-xlswriter --allowerasing -y
 
 chkconfig sendmail on
 service sendmail start
