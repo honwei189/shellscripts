@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 26/08/2020 20:16:29
+ # @last modified     : 05/09/2020 13:57:26
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 /usr/sbin/setenforce 0 2>&1 >/dev/null
@@ -53,7 +53,7 @@ dnf install ImageMagick-c++ -y
 
 dnf -y install wget bzip2 tar gcc gcc-c++
 dnf group -y install "Development Tools"
-dnf install git wget vim net-tools -y
+dnf install git svn wget vim net-tools -y
 
 #dnf module reset php -y
 dnf module enable php:remi-7.3 -y
