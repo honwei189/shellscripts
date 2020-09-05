@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 04/04/2020 21:10:20
- # @last modified     : 06/04/2020 10:20:57
+ # @last modified     : 05/09/2020 15:44:15
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
@@ -196,6 +196,9 @@ chown -R nginx.nginx /var/lib/php/*
 
 mkdir -p /var/cache/nginx/client_temp
 chkconfig nginx on
+
+firewall-cmd --permanent --add-port=443/udp
+firewall-cmd --reload
 
 
 dnf install svn -y
