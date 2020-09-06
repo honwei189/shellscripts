@@ -4,7 +4,7 @@
  # @version           : "1.0.0" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 05/09/2020 13:57:26
+ # @last modified     : 06/09/2020 16:15:21
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 /usr/sbin/setenforce 0 2>&1 >/dev/null
@@ -70,6 +70,10 @@ dnf install libyaml* php80-php-pecl-yaml php80-php-pecl-xlswriter --allowerasing
 
 chkconfig sendmail on
 service sendmail start
+
+#echo "" >> /etc/aliases
+#echo "" >> /etc/aliases
+#echo -e "root:\t\tYOUR_EMAIL_ADDRESS" >> /etc/aliases
 
 
 dnf install http://mirror.centos.org/centos/8/PowerTools/x86_64/os/Packages/libedit-devel-3.1-23.20170329cvs.el8.x86_64.rpm -y
