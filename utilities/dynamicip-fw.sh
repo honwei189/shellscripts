@@ -14,7 +14,7 @@
  # @version           : "1.0.0"
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 25/04/2020 12:27:17
- # @last modified     : 29/05/2020 16:50:38
+ # @last modified     : 07/09/2020 20:40:18
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
@@ -75,9 +75,11 @@ add() {
 
         echo "$1:$ip" >>$IP_LIST
         
-        firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
-        #firewall-cmd --refresh > /dev/null 2>&1
-        firewall-cmd --reload > /dev/null 2>&1
+        # firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
+        # #firewall-cmd --refresh > /dev/null 2>&1
+        # firewall-cmd --reload > /dev/null 2>&1
+
+        firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
 
         echo ""
 
@@ -153,9 +155,10 @@ delete() {
             ip=$(host $1 | awk '/has address/ { print $4 }')
         fi
         
-        firewall-cmd --permanent --remove-source=$ip --zone=trusted > /dev/null 2>&1
-        #firewall-cmd --refresh > /dev/null 2>&1
-        firewall-cmd --reload > /dev/null 2>&1
+        # firewall-cmd --permanent --remove-source=$ip --zone=trusted > /dev/null 2>&1
+        ##firewall-cmd --refresh > /dev/null 2>&1
+        #firewall-cmd --reload > /dev/null 2>&1
+        firewall-cmd --remove-source=$ip --zone=trusted > /dev/null 2>&1
 
         echo ""
         if [ $is_ip -eq 1 ]; then
@@ -234,14 +237,16 @@ refresh() {
                 fw=$(firewall-cmd --zone=trusted --list-sources | grep "$old_ip")
 
                 if [ "$fw" != "" ]; then
-                    firewall-cmd --permanent --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
+                    # firewall-cmd --permanent --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
+                    firewall-cmd --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
                     restart_fw=1
                 fi
 
                 fw=$(firewall-cmd --zone=trusted --list-sources | grep "$ip")
 
                 if [ "$fw" == "" ]; then
-                    firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
+                    # firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
+                    firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
                     restart_fw=1
                 fi
             fi
