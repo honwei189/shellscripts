@@ -236,7 +236,7 @@ cd /usr/local/src/php/modules/
 wget https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
 tar xvfz ioncube_loaders_lin_x86-64.tar.gz
 cd ioncube
-cp -Rp ioncube_loader_lin_7.3.so /usr/lib64/php/modules/
+cp -Rp ioncube_loader_lin_7.4.so /usr/lib64/php/modules/
 
 echo "zend_extension = ioncube_loader_lin_7.3.so" >> /etc/php.d/00-ioncube.ini
 
