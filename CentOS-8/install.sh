@@ -56,17 +56,17 @@ dnf group -y install "Development Tools"
 dnf install git svn wget vim net-tools -y
 
 #dnf module reset php -y
-dnf module enable php:remi-7.3 -y
+dnf module enable php:remi-7.4 -y
 
 #dnf -y --enablerepo=epel,remi install screen htop sendmail mailx unzip nginx bind-utils tmpwatch nfs-utils
-dnf -y install screen htop sendmail mailx unzip nginx bind-utils tmpwatch nfs-utils
+dnf -y install screen htop sendmail mailx unzip nginx bind-utils tmpwatch nfs-utils network-scripts
 dnf -y install gcc.x86_64 pcre-devel.x86_64 openssl-devel.x86_64 GeoIP GeoIP-devel GeoIP-data zlib-devel
 dnf install GeoIP GeoIP-devel GeoIP-data -y
 #dnf install -y php php-fpm php-cli php-opcache php-common php-mysql php-pdo php-curl php-dom php-simplexml php-xml php-xmlrpc php-xmlreader php-curl php-date php-exif php-filter php-ftp php-gd php-hash php-iconv php-json php-libxml php-pecl-imagick php-mbstring php-mysqlnd php-openssl php-pcre php-posix php-sockets php-spl php-tokenizer php-zlib
 dnf install -y php php-fpm php-cli php-json php-common php-mysql php-pdo php-curl php-dom php-simplexml php-xml php-xmlrpc php-xmlreader php-curl php-date php-exif php-filter php-ftp php-gd php-hash php-iconv php-json php-libxml php-pecl-imagick php-mbstring php-mysqlnd php-openssl php-pcre php-posix php-sockets php-spl php-tokenizer php-zlib php-pecl-zip
 dnf install mysql mysql-server -y
 
-dnf install libyaml* php80-php-pecl-yaml php80-php-pecl-xlswriter --allowerasing -y
+#dnf install libyaml* php80-php-pecl-yaml php80-php-pecl-xlswriter --allowerasing -y
 
 chkconfig sendmail on
 service sendmail start
@@ -113,6 +113,7 @@ echo "#logpath = /var/log/fail2ban.log" >> /etc/fail2ban/jail.local
 echo "#action = iptables-multiport" >> /etc/fail2ban/jail.local
 echo "echo "#maxretry = 2" >> /etc/fail2ban/jail.local
 echo "#findtime = 1800" >> /etc/fail2ban/jail.local
+echo "findtime = 10" >> /etc/fail2ban/jail.local
 echo "#bantime = 86400     # ban for a day" >> /etc/fail2ban/jail.local
 echo "" >> /etc/fail2ban/jail.local
 echo "" >> /etc/fail2ban/jail.local
@@ -291,11 +292,13 @@ chmod +x /usr/local/bin/composer
 dnf install nodejs -y
 npm install pm2 -g
 
-my_cnf="\n#bind_address                           = 0.0.0.0"
+
+my_cnf="\n#bind_address                            = 0.0.0.0"
 my_cnf=$my_cnf"\ndefault-authentication-plugin           = mysql_native_password"
-my_cnf=$my_cnf"\ncollation-server                        = utf8_general_ci"
-my_cnf=$my_cnf"\ninit-connect                            = 'SET NAMES utf8'"
-my_cnf=$my_cnf"\ncharacter-set-server                    = utf8"
+my_cnf=$my_cnf"\ncollation-server                        = utf8mb4_0900_ai_ci"
+my_cnf=$my_cnf"\ninit-connect                            = 'SET NAMES utf8mb4'"
+my_cnf=$my_cnf"\ncharacter-set-server                    = utf8mb4"
+my_cnf=$my_cnf"\nskip-character-set-client-handshake     = true"
 my_cnf=$my_cnf"\ntmpdir                                  = /tmp"
 my_cnf=$my_cnf"\nskip_external_locking"
 my_cnf=$my_cnf"\n"
@@ -322,16 +325,6 @@ my_cnf=$my_cnf"\ninnodb_write_io_threads                 = 8"
 my_cnf=$my_cnf"\n"
 my_cnf=$my_cnf"\n"
 my_cnf=$my_cnf"\n"
-my_cnf=$my_cnf"\n# Recommended in standard MySQL setup"
-my_cnf=$my_cnf"\n"
-my_cnf=$my_cnf"\n# mySQL v5.6.x"
-my_cnf=$my_cnf"\n#sql_mode                               = NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES"
-my_cnf=$my_cnf"\n"
-my_cnf=$my_cnf"\n# mySQL v5.7.x"
-my_cnf=$my_cnf"\n#sql_mode                               = STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
-my_cnf=$my_cnf"\n"
-my_cnf=$my_cnf"\n#The default SQL mode in MySQL 5.7 includes these modes: ONLY_FULL_GROUP_BY, STRICT_TRANS_TABLES, NO_ZERO_IN_DATE, NO_ZERO_DATE, ERROR_FOR_DIVISION_BY_ZERO, NO_AUTO_CREATE_USER, and NO_ENGINE_SUBSTITUTION."
-my_cnf=$my_cnf"\n"
 my_cnf=$my_cnf"\n#Remove all default SQL mode to prevent SQL errors"
 my_cnf=$my_cnf"\nsql_mode                                = \"\""
 my_cnf=$my_cnf"\n"
@@ -342,6 +335,7 @@ my_cnf=$my_cnf"\nsymbolic-links                          = 0"
 my_cnf=$my_cnf"\n"
 
 sed -i "s|pid-file=/run/mysqld/mysqld.pid|pid-file=/run/mysqld/mysqld.pid\n$my_cnf|g" /etc/my.cnf.d/mysql-server.cnf
+sed -i "s|[mysqld]|[mysql]\ndefault-character-set                    = utf8mb4\n\n[mysqld]|g" /etc/my.cnf.d/mysql-server.cnf
 
 
 mysql -e "CREATE USER 'root'@'%' IDENTIFIED BY ''"
