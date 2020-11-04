@@ -98,7 +98,7 @@ echo "" >> /etc/fail2ban/jail.local
 echo "# An ip address/host is banned if it has generated \"maxretry\" during the last \"findtime\" seconds." >> /etc/fail2ban/jail.local
 echo "#bantime  = -1" >> /etc/fail2ban/jail.local
 echo "bantime = 31536000" >> /etc/fail2ban/jail.local
-echo "# 預設在 600 秒內達到 maxretry 的次數就封鎖" >> /etc/fail2ban/jail.local
+echo "# Default 600 seconds reached the maxretry then block" >> /etc/fail2ban/jail.local
 echo "findtime = 600" >> /etc/fail2ban/jail.local
 echo "maxretry = 2" >> /etc/fail2ban/jail.local
 echo "action = %(action_mwl)s" >> /etc/fail2ban/jail.local
@@ -238,7 +238,7 @@ tar xvfz ioncube_loaders_lin_x86-64.tar.gz
 cd ioncube
 cp -Rp ioncube_loader_lin_7.4.so /usr/lib64/php/modules/
 
-echo "zend_extension = ioncube_loader_lin_7.3.so" >> /etc/php.d/00-ioncube.ini
+echo "zend_extension = ioncube_loader_lin_7.4.so" >> /etc/php.d/00-ioncube.ini
 
 sed -i 's/;opcache.enable_cli=0/;opcache.enable_cli=0\nopcache.enable_cli=1/g' /etc/php.d/10-opcache.ini
 sed -i 's/;opcache.optimization_level=0x7FFEBFFF/;;opcache.optimization_level=0x7FFEBFFF\n;opcache.optimization_level=-1/g' /etc/php.d/10-opcache.ini
