@@ -293,7 +293,7 @@ dnf install nodejs -y
 npm install pm2 -g
 
 
-my_cnf="\n#bind_address                            = 0.0.0.0"
+my_cnf=$my_cnf"\n#bind_address                           = 0.0.0.0"
 my_cnf=$my_cnf"\ndefault-authentication-plugin           = mysql_native_password"
 my_cnf=$my_cnf"\ncollation-server                        = utf8mb4_0900_ai_ci"
 my_cnf=$my_cnf"\ninit-connect                            = 'SET NAMES utf8mb4'"
@@ -302,6 +302,9 @@ my_cnf=$my_cnf"\nskip-character-set-client-handshake     = true"
 my_cnf=$my_cnf"\ntmpdir                                  = /tmp"
 my_cnf=$my_cnf"\nskip_external_locking"
 my_cnf=$my_cnf"\n"
+my_cnf=$my_cnf"\nslow_query_log                          = 0"
+my_cnf=$my_cnf"\nslow-query_log_file                     = /var/log/mysql-slow.log"
+my_cnf=$my_cnf"\nlong_query_time                         = 2"
 my_cnf=$my_cnf"\nmax_connections                         = 3000"
 my_cnf=$my_cnf"\n"
 my_cnf=$my_cnf"\n## Raise to 128M for 2GB RAM, 256M for 4GB RAM and 512M for 8GB RAM"
@@ -311,7 +314,8 @@ my_cnf=$my_cnf"\n## Raise to 128M for 2GB RAM, 256M for 4GB RAM and 512M for 8GB
 my_cnf=$my_cnf"\ninnodb_buffer_pool_size                 = 128M"
 my_cnf=$my_cnf"\n"
 my_cnf=$my_cnf"\n## Misc Tunables (Don't touch these unless you know why you would want to touch these)##"
-my_cnf=$my_cnf"\nmax_allowed_packet                      = 16M"
+my_cnf=$my_cnf"\n#max_allowed_packet                     = 16M"
+my_cnf=$my_cnf"\nmax_allowed_packet                      = 256M"
 my_cnf=$my_cnf"\ninnodb_file_per_table"
 my_cnf=$my_cnf"\n"
 my_cnf=$my_cnf"\n## Changing this setting requires you to stop MySQL, move the current logs out of the way, and then starting MySQL ##"
@@ -335,8 +339,10 @@ my_cnf=$my_cnf"\nsymbolic-links                          = 0"
 my_cnf=$my_cnf"\n"
 
 sed -i "s|pid-file=/run/mysqld/mysqld.pid|pid-file=/run/mysqld/mysqld.pid\n$my_cnf|g" /etc/my.cnf.d/mysql-server.cnf
-sed -i "s|[mysqld]|[mysql]\ndefault-character-set                    = utf8mb4\n\n[mysqld]|g" /etc/my.cnf.d/mysql-server.cnf
+sed -i "s|\[mysqld\]|\[mysql\]\ndefault-character-set                    = utf8mb4\n\n\[mysqld\]|g" /etc/my.cnf.d/mysql-server.cnf
 
+touch /var/log/mysql-slow.log
+chown -R mysql.mysql /var/log/mysql-slow.log
 
 mysql -e "CREATE USER 'root'@'%' IDENTIFIED BY ''"
 mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%';"
