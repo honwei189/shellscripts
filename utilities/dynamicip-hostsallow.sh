@@ -73,7 +73,7 @@ add() {
 
         echo "$1:$ip" >>$IP_LIST
         
-        echo "sshd: $ip" >> /etc/hosts.allow
+        echo "ALL: $ip" >> /etc/hosts.allow
 
         echo ""
 
@@ -149,7 +149,7 @@ delete() {
             ip=$(host $1 | awk '/has address/ { print $4 }')
         fi
         
-        sed --in-place "/sshd: $ip/d" /etc/hosts.allow
+        sed --in-place "/ALL: $ip/d" /etc/hosts.allow
 
         echo ""
         if [ $is_ip -eq 1 ]; then
@@ -211,7 +211,7 @@ refresh() {
 
                 old_ip=$(echo $find | cut -d":" -f2)
                 
-                cmd="sed -i 's/sshd: $old_ip/sshd: $ip/g' /etc/hosts.allow"
+                cmd="sed -i 's/ALL: $old_ip/ALL: $ip/g' /etc/hosts.allow"
                 eval "$cmd"
             fi
         fi

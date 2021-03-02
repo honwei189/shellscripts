@@ -30,7 +30,7 @@ IP_LIST="$DYNAMIC_IP_PATH/ips"
 
 ##########
 
-restart_fw=0
+# restart_fw=0
 
 if [ ! -d $DYNAMIC_IP_PATH ]; then
     mkdir -p $DYNAMIC_IP_PATH
@@ -222,7 +222,7 @@ refresh() {
             # $SETCOLOR_NORMAL
             # echo ""
             # echo ""
-            restart_fw=1
+            # restart_fw=1
         else
             if [ "$find" != "$host:$ip" ]; then
                 cmd="sed -i 's/${find}/$host:$ip/g' $IP_LIST"
@@ -239,7 +239,7 @@ refresh() {
                 if [ "$fw" != "" ]; then
                     # firewall-cmd --permanent --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
                     firewall-cmd --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
-                    restart_fw=1
+                    # restart_fw=1
                 fi
 
                 fw=$(firewall-cmd --zone=trusted --list-sources | grep "$ip")
@@ -247,16 +247,16 @@ refresh() {
                 if [ "$fw" == "" ]; then
                     # firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
                     firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
-                    restart_fw=1
+                    # restart_fw=1
                 fi
             fi
         fi
 
     done
 
-    if [ $restart_fw -eq 1 ]; then
-        sudo firewall-cmd --reload
-    fi
+    # if [ $restart_fw -eq 1 ]; then
+    #     sudo firewall-cmd --reload
+    # fi
 }
 
 help() {
