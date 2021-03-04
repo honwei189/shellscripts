@@ -73,7 +73,7 @@ add() {
 
         echo "$1:$ip" >>$IP_LIST
         
-        echo "ALL: $ip" >> /etc/hosts.allow
+        echo -e "ALL: $ip\t# $1" >> /etc/hosts.allow
 
         echo ""
 
@@ -97,17 +97,32 @@ add() {
 
         if [ $is_ip -eq 1 ]; then
             echo -n "IP "
+            $SETCOLOR_FAILURE
+            echo -n "$1"
         else
             echo -n "Hostname "
+            $SETCOLOR_FAILURE
+            echo -n "$1 - $ip"
         fi
 
-        $SETCOLOR_FAILURE
-        echo -n "$1"
-        $SETCOLOR_SUCCESS
-        echo " already exists"
-        $SETCOLOR_NORMAL
-        echo ""
-        echo ""
+        fw=$(cat /etc/hosts.allow | grep "$1")
+        if [ "$fw" == "" ]; then
+            echo -e "ALL: $ip\t# $1" >> /etc/hosts.allow
+
+            $SETCOLOR_SUCCESS
+            echo " has been granted into trusted network successfully"
+            $SETCOLOR_NORMAL
+            echo ""
+            echo ""
+        else
+            $SETCOLOR_FAILURE
+            echo -n "$1"
+            $SETCOLOR_SUCCESS
+            echo " already exists"
+            $SETCOLOR_NORMAL
+            echo ""
+            echo ""
+        fi
     fi
 }
 
@@ -204,25 +219,41 @@ refresh() {
         
         if [ "$find" == "" ]; then
             echo "$host:$ip" >>$IP_LIST
+            echo -e "ALL: $ip\t# $1" >> /etc/hosts.allow
         else
             if [ "$find" != "$host:$ip" ]; then
                 cmd="sed -i 's/${find}/$host:$ip/g' $IP_LIST"
                 eval "$cmd"
                 
-                cmd="sed -i 's/ALL: $old_ip/ALL: $ip/g' /etc/hosts.allow"
-                eval "$cmd"
+                # cmd="sed -i 's/ALL: $old_ip/ALL: $ip/g' /etc/hosts.allow"
+                # eval "$cmd"
+            # else
+            #     # old_ip=$(echo $find | cut -d":" -f2)
+
+            #     # fw=$(cat /etc/hosts.allow | grep "ALL: $old_ip")
+
+            #     # if [ "$fw" == "" ]; then
+            #     #     cmd="sed -i 's/ALL: $old_ip/ALL: $ip/g' /etc/hosts.allow"
+            #     # else
+            #     #     cmd="sed -i 's/ALL: $old_ip/ALL: $ip/g' /etc/hosts.allow"
+            #     # fi
+
+            #     # eval "$cmd"
+            fi
+
+            fw=$(cat /etc/hosts.allow | grep -P "$host")
+
+            if [ "$fw" == "" ]; then
+                echo -e "ALL: $ip\t# $1" >> /etc/hosts.allow
             else
-                old_ip=$(echo $find | cut -d":" -f2)
+                old_ip=$(echo $fw |tr '\t' ' ' |cut -d' ' -f2 | xargs)
 
                 if [ "$old_ip" != "$ip" ]; then
-                    fw=$(cat /etc/hosts.allow | grep "ALL: $ip")
-
-                    if [ "$fw" == "" ]; then
-                        cmd="sed -i 's/ALL: $old_ip/ALL: $ip/g' /etc/hosts.allow"
-                        eval "$cmd"
-                    fi
+                    cmd="sed -i 's/ALL: $old_ip\t# $host/ALL: $ip\t# $host/g' /etc/hosts.allow"
+                    eval "$cmd"
                 fi
             fi
+
         fi
 
     done
