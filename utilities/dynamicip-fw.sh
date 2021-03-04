@@ -224,11 +224,12 @@ refresh() {
             # echo ""
             # restart_fw=1
         else
+            old_ip=$(echo $find | cut -d":" -f2)
+
             if [ "$find" != "$host:$ip" ]; then
                 cmd="sed -i 's/${find}/$host:$ip/g' $IP_LIST"
                 eval "$cmd"
 
-                old_ip=$(echo $find | cut -d":" -f2)
                 #old_ip=$(echo $old_ip | cut -d"." -f1-3)
                 #old_ip=$(echo $old_ip".0")
                 #base_ip=$(echo $ip | cut -d"." -f1-3)
@@ -248,6 +249,20 @@ refresh() {
                     # firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
                     firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
                     # restart_fw=1
+                fi
+            else
+                fw=$(firewall-cmd --zone=trusted --list-sources | grep "$ip")
+
+                if [ "$fw" == "" ]; then                
+                    # firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
+                    firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
+                    # restart_fw=1
+
+                    oldfw=$(firewall-cmd --zone=trusted --list-sources | grep "$old_ip")
+
+                    if [ "$oldfw" != "" ]; then
+                        firewall-cmd --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
+                    fi
                 fi
             fi
         fi

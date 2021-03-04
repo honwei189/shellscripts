@@ -208,11 +208,20 @@ refresh() {
             if [ "$find" != "$host:$ip" ]; then
                 cmd="sed -i 's/${find}/$host:$ip/g' $IP_LIST"
                 eval "$cmd"
-
-                old_ip=$(echo $find | cut -d":" -f2)
                 
                 cmd="sed -i 's/ALL: $old_ip/ALL: $ip/g' /etc/hosts.allow"
                 eval "$cmd"
+            else
+                old_ip=$(echo $find | cut -d":" -f2)
+
+                if [ "$old_ip" != "$ip" ]; then
+                    fw=$(cat /etc/hosts.allow | grep "ALL: $ip")
+
+                    if [ "$fw" == "" ]; then
+                        cmd="sed -i 's/ALL: $old_ip/ALL: $ip/g' /etc/hosts.allow"
+                        eval "$cmd"
+                    fi
+                fi
             fi
         fi
 
