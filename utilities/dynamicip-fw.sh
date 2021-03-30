@@ -258,11 +258,11 @@ refresh() {
                     firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
                     # restart_fw=1
 
-                    oldfw=$(firewall-cmd --zone=trusted --list-sources | grep "$old_ip")
+                    # oldfw=$(firewall-cmd --zone=trusted --list-sources | grep "$old_ip")
 
-                    if [ "$oldfw" != "" ]; then
-                        firewall-cmd --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
-                    fi
+                    # if [ "$oldfw" != "" ]; then
+                    #     firewall-cmd --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
+                    # fi
                 fi
             fi
         fi
