@@ -2,10 +2,10 @@
 ###
 # @description       : Allows to get latest files from GIT and allows to skip update certains file
 # @usage             : update
-# @version           : "1.1.0"
+# @version           : "1.1.1"
 # @creator           : Gordon Lim <honwei189@gmail.com>
 # @created           : 12/05/2020 16:06:05
-# @last modified     : 21/05/2020 14:05:47
+# @last modified     : 01/07/2021 08:29:31
 # @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
