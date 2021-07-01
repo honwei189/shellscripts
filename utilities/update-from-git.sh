@@ -1,12 +1,12 @@
 #!/bin/sh
 ###
- # @description       : Allows to get latest files from GIT and allows to skip update certains file
- # @usage             : update
- # @version           : "1.1.0"
- # @creator           : Gordon Lim <honwei189@gmail.com>
- # @created           : 12/05/2020 16:06:05
- # @last modified     : 21/05/2020 14:05:47
- # @last modified by  : Gordon Lim <honwei189@gmail.com>
+# @description       : Allows to get latest files from GIT and allows to skip update certains file
+# @usage             : update
+# @version           : "1.1.0"
+# @creator           : Gordon Lim <honwei189@gmail.com>
+# @created           : 12/05/2020 16:06:05
+# @last modified     : 21/05/2020 14:05:47
+# @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
 ################################# INSTALLATION ################################
@@ -30,7 +30,7 @@ SETCOLOR_FAILURE="echo -en \\033[1;31m"
 SETCOLOR_WARNING="echo -en \\033[1;33m"
 SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
-check_git_dir(){
+check_git_dir() {
     if [[ -d $pwd/.git ]] && [[ -f $pwd/.git/config ]]; then
         # LAST_UPDATE=`git show --no-notes --format=format:"%H" | head -n 1`
         # LAST_COMMIT=`git show --no-notes --format=format:"%H" | head -n 1`
@@ -103,25 +103,30 @@ changelog() {
 update() {
     if [ $LAST_COMMIT != $LAST_UPDATE ]; then
         if [[ -f $pwd/.ignores ]]; then
+            #git ls-files -v | grep '^h' | sed 's/^..//' | sed 's/\ /\\ /g' | xargs -I FILE git update-index --no-assume-unchanged FILE || true
+            git ls-files -v | grep '^h' | sed 's/^..//' | sed 's/\ /\\ /g' | xargs -I FILE git update-index --no-assume-unchanged FILE
+
             # for list in $(cat $pwd/.ignores | awk '/^;/{next}1' | awk '/^#/{next}1'); do
             for list in $(cat $pwd/.ignores | egrep -v '^(;|#|//|$)'); do
                 #find $dir -print0 | ls {} \;
                 list="$(echo -e "${list}" | sed -e 's/^[[:space:]]*//')"
 
                 if [[ $list == *"*"* ]]; then
-                    list=$(echo $list | sed -e "s/\*//g")
+                    list=$(echo $list | sed -e "s/\*//g" | tr -d '\r')
                     #echo $list
                     #find $list -maxdepth 1 -type d \( ! -name . \) -exec bash -c "cd '{}' && pwd && git ls-files -z ${pwd} | xargs -0 git update-index --assume-unchanged" \;
                     for f in $(find $list -type f \( ! -name . \)); do
-                        git update-index --assume-unchanged $list >/dev/null 2>&1
+                        if [[ -f $list ]]; then
+                            git update-index --assume-unchanged "$list" >/dev/null 2>&1
+                        fi
                     done
                 else
                     if [[ -d $list ]]; then
-                        git update-index --assume-unchanged $list/ >/dev/null 2>&1
+                        git update-index --assume-unchanged "$list/" >/dev/null 2>&1
                     fi
 
                     if [[ -f $list ]]; then
-                        git update-index --assume-unchanged $list >/dev/null 2>&1
+                        git update-index --assume-unchanged "$list" >/dev/null 2>&1
                     fi
                 fi
             done
@@ -140,10 +145,53 @@ update() {
             echo "# " >>$pwd/.ignores
         fi
 
+        #echo "Fetch branches"
+        #echo ""
+
+        git fetch
+
+        #for file in $(git diff master origin/master --name-only); do
+        #for file in $(git diff --name-only | tr -d '\n'); do
+        ##for file in $(git diff --name-only); do
+        #    git checkout "$file" >/dev/null
+        #done
+
+        for file in $(git diff --name-only $(git rev-parse HEAD) origin/master); do
+            if [ $(git config --file .gitmodules --get-regexp path | awk '{ print $2 }' | grep "$file") == "$file" ]; then
+                cd $file
+                git fetch
+
+                #for files in $(git diff --name-only $(git rev-parse HEAD) origin/master); do
+                #    #echo "git checkout \"$files\"";
+                #    git checkout $files
+                #done
+
+                remote=$(git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD) | tr -d "\n")
+
+                git diff --name-only $(git rev-parse HEAD) $remote | xargs -I FILE git checkout FILE
+
+                git pull $remote | sed 's/\// /g'
+
+                cd $pwd
+            else
+                git checkout "$file"
+                #echo "git checkout \"$file\"";
+            fi
+        done
+
+        #echo "Prepare to update submodule"
+        #echo ""
+        #echo ""
+
+        #if [[ -f $pwd/.gitmodules ]]; then
+        #    #git submodule update --recursive >/dev/null 2>&1
+        #    git submodule foreach git pull origin master
+        #fi
+
         git pull
 
-        if [[ ! "$TODAY" == "$LAST_UPDATE_DATE_ONLY" ]];then
-            LAST_UPDATE_DATE_ONLY=$TODAY;
+        if [[ ! "$TODAY" == "$LAST_UPDATE_DATE_ONLY" ]]; then
+            LAST_UPDATE_DATE_ONLY=$TODAY
         fi
 
         changelog
