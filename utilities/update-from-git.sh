@@ -115,11 +115,14 @@ update() {
                     list=$(echo $list | sed -e "s/\*//g" | tr -d '\r')
                     #echo $list
                     #find $list -maxdepth 1 -type d \( ! -name . \) -exec bash -c "cd '{}' && pwd && git ls-files -z ${pwd} | xargs -0 git update-index --assume-unchanged" \;
-                    for f in $(find $list -type f \( ! -name . \)); do
-                        if [[ -f $list ]]; then
-                            git update-index --assume-unchanged "$list" >/dev/null 2>&1
-                        fi
-                    done
+
+                    if [[ -f $list ] || [ -d $list ] ]; then
+                        for f in $(find $list -type f \( ! -name . \)); do
+                            if [[ -d $f ]]; then
+                                git update-index --assume-unchanged "$f" >/dev/null 2>&1
+                            fi
+                        done
+                    fi
                 else
                     if [[ -d $list ]]; then
                         git update-index --assume-unchanged "$list/" >/dev/null 2>&1
@@ -157,7 +160,8 @@ update() {
         #done
 
         for file in $(git diff --name-only $(git rev-parse HEAD) origin/master); do
-            if [ $(git config --file .gitmodules --get-regexp path | awk '{ print $2 }' | grep "$file") == "$file" ]; then
+            # if [ $(git config --file .gitmodules --get-regexp path | awk '{ print $2 }' | grep "$file") == "$file" ]; then
+            if [ $(git config --file .gitmodules --get-regexp path | awk '{ print $2 }') == "$file" ]; then
                 cd $file
                 git fetch
 
@@ -168,9 +172,16 @@ update() {
 
                 remote=$(git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD) | tr -d "\n")
 
-                git diff --name-only $(git rev-parse HEAD) $remote | xargs -I FILE git checkout FILE
+                #git diff --name-only $(git rev-parse HEAD) $remote | xargs -I FILE git checkout FILE
 
-                git pull $remote | sed 's/\// /g'
+                for files in $(git diff --name-only $(git rev-parse HEAD) $remote); do
+                    #echo "git checkout \"$files\"";
+                    if [[ -f $files ]]; then
+                        git checkout "$files"
+                    fi
+                done
+
+                git pull $(echo $remote | sed 's/\// /g')
 
                 cd $pwd
             else
