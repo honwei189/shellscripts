@@ -151,7 +151,22 @@ update() {
         #echo "Fetch branches"
         #echo ""
 
-        git fetch
+        echo ""
+        $SETCOLOR_SUCCESS
+        echo "[ Refresh update list from $(git remote get-url $(git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD)|cut -d/ -f1)) ]"
+        echo "----------------------------------------------------------------------------------------------"
+        $SETCOLOR_FAILURE
+        echo "Completed"
+        $SETCOLOR_NORMAL
+        echo ""
+        echo ""
+        
+        git fetch >/dev/null 2>&1
+
+        $SETCOLOR_SUCCESS
+        echo "[ Start updating ... ]"
+        $SETCOLOR_NORMAL
+        echo ""
 
         #for file in $(git diff master origin/master --name-only); do
         #for file in $(git diff --name-only | tr -d '\n'); do
@@ -159,11 +174,12 @@ update() {
         #    git checkout "$file" >/dev/null
         #done
 
-        for file in $(git diff --name-only $(git rev-parse HEAD) origin/master); do
+
+        for file in $(git diff --name-only $(git rev-parse HEAD) $(git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD) | tr -d "\n")); do
             # if [ $(git config --file .gitmodules --get-regexp path | awk '{ print $2 }' | grep "$file") == "$file" ]; then
             if [ $(git config --file .gitmodules --get-regexp path | awk '{ print $2 }') == "$file" ]; then
                 cd $file
-                git fetch
+                git fetch >/dev/null 2>&1
 
                 #for files in $(git diff --name-only $(git rev-parse HEAD) origin/master); do
                 #    #echo "git checkout \"$files\"";
