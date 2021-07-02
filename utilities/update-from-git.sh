@@ -153,7 +153,8 @@ update() {
 
         echo ""
         $SETCOLOR_SUCCESS
-        echo "[ Refresh update list from $(git remote get-url $(git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD)|cut -d/ -f1)) ]"
+        #echo "[ Refresh update list from $(git remote get-url $(git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD)|cut -d/ -f1)) ]"
+        echo "[ Refresh update list from $(git config --get remote.origin.url) ]"
         echo "----------------------------------------------------------------------------------------------"
         $SETCOLOR_FAILURE
         echo "Completed"
