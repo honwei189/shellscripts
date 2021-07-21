@@ -223,6 +223,9 @@ update() {
 
         git pull
 
+        chown -R `stat . -c %u:%g` *
+        chmod -R `stat . -c %a` *
+
         if [[ ! "$TODAY" == "$LAST_UPDATE_DATE_ONLY" ]]; then
             LAST_UPDATE_DATE_ONLY=$TODAY
         fi
