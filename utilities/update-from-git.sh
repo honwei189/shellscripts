@@ -175,10 +175,15 @@ update() {
         #    git checkout "$file" >/dev/null
         #done
 
+        head_commit_id=$(git rev-parse HEAD)
+        head=$(git symbolic-ref -q HEAD)
+        m=$(git diff --name-only $head_commit_id $(git for-each-ref --format='%(upstream:short)' $head | tr -d "\n"))
 
-        for file in $(git diff --name-only $(git rev-parse HEAD) $(git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD) | tr -d "\n")); do
+        for file in $m; do
             # if [ $(git config --file .gitmodules --get-regexp path | awk '{ print $2 }' | grep "$file") == "$file" ]; then
-            if [ $(git config --file .gitmodules --get-regexp path | awk '{ print $2 }') == "$file" ]; then
+            m=$(git config --file .gitmodules --get-regexp path | awk '{ print $2 }' | grep "$file")
+
+            if [ "$m" == "$file" ]; then
                 cd $file
                 git fetch >/dev/null 2>&1
 
