@@ -207,7 +207,9 @@ update() {
 
                 cd $pwd
             else
-                git checkout "$file"
+                if [[ -f "$file" ]]; then
+                    git checkout "$file"
+                fi
                 #echo "git checkout \"$file\"";
             fi
         done
