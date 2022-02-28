@@ -56,7 +56,7 @@ dnf group -y install "Development Tools"
 dnf install git svn wget vim net-tools -y
 
 #dnf module reset php -y
-dnf module enable php:remi-7.4 -y
+dnf module enable php:remi-8.1 -y
 
 #dnf -y --enablerepo=epel,remi install screen htop sendmail mailx unzip nginx bind-utils tmpwatch nfs-utils
 dnf -y install screen htop sendmail mailx unzip nginx bind-utils tmpwatch nfs-utils network-scripts
@@ -232,13 +232,22 @@ make
 make install
 echo "extension=brotli.so" >> /etc/php.d/20-brotli.ini
 
-cd /usr/local/src/php/modules/
-wget https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
-tar xvfz ioncube_loaders_lin_x86-64.tar.gz
-cd ioncube
-cp -Rp ioncube_loader_lin_7.4.so /usr/lib64/php/modules/
+#cd /usr/local/src/php/modules/
+#wget https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
+#tar xvfz ioncube_loaders_lin_x86-64.tar.gz
+#cd ioncube
+#cp -Rp ioncube_loader_lin_7.4.so /usr/lib64/php/modules/
+#echo "zend_extension = ioncube_loader_lin_7.4.so" >> /etc/php.d/00-ioncube.ini
 
-echo "zend_extension = ioncube_loader_lin_7.4.so" >> /etc/php.d/00-ioncube.ini
+
+
+cd /usr/local/src/php/modules/
+mkdir sourceguardian && cd sourceguardian
+wget loaders.linux-x86_64.tar.gz #download from https://www.sourceguardian.com/loaders.html
+tar xvfz loaders.linux-x86_64.tar.gz
+cp ixed.8.1.lin /usr/lib64/php/modules/
+echo "zend_extension = ixed.8.1.lin" >> /etc/php.d/00-sourceguardian.ini
+
 
 sed -i 's/;opcache.enable_cli=0/;opcache.enable_cli=0\nopcache.enable_cli=1/g' /etc/php.d/10-opcache.ini
 sed -i 's/;opcache.optimization_level=0x7FFEBFFF/;;opcache.optimization_level=0x7FFEBFFF\n;opcache.optimization_level=-1/g' /etc/php.d/10-opcache.ini
