@@ -17,7 +17,8 @@ dnf -y remove podman
 #rpm -Uvh --nodeps $(repoquery --location podman)
 dnf install -y @container-tools
 
-dnf install docker-ce --nobest -y
+#dnf install docker-ce --nobest -y
+dnf install docker-ce --allowerasing -y
 #dnf install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm -y
 #dnf install docker-ce -y
 
