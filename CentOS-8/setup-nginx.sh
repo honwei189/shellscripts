@@ -141,6 +141,9 @@ make
 #make && make install PREFIX=/usr/local/LuaJIT
 
 dnf install luajit luajit-devel -y
+export LUAJIT_LIB=/usr/lib64;
+export LUAJIT_INC=/usr/include/luajit-2.1;
+
 
 cd /usr/local/src/nginx/modules/
 wget https://github.com/openresty/lua-nginx-module/archive/refs/tags/v0.10.12.tar.gz
