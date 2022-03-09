@@ -1,10 +1,10 @@
 #!/bin/sh
 ###
  # @description       : Install CentOS 8 necessary softwares, PHP and mySQL
- # @version           : "1.0.0" 
+ # @version           : "1.0.1" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
- # @last modified     : 06/09/2020 16:15:21
+ # @last modified     : 09/03/2022 09:04:21
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 /usr/sbin/setenforce 0 2>&1 >/dev/null
