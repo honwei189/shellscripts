@@ -110,7 +110,7 @@ cd /usr/local/src/
 curl -O http://nginx.org/download/nginx-1.21.6.tar.gz
 tar xvzf nginx-1.21.6.tar.gz
 ln -s /usr/lib64/nginx/modules /etc/nginx/
-cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.19.2
+cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.21.6
 mkdir -p /var/cache/nginx/client_temp
 mkdir -p /etc/nginx
 
