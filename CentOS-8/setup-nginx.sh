@@ -69,6 +69,7 @@ git clone --recursive https://github.com/cloudflare/quiche
 git clone https://github.com/leev/ngx_http_geoip2_module.git
 
 
+
 cd /usr/local/src/
 wget https://www.openssl.org/source/openssl-1.1.1m.tar.gz
 tar -zxf openssl-1.1.1m.tar.gz
@@ -92,6 +93,34 @@ make
 #make install
 
 
+
+
+cd /usr/local/src/nginx/modules/
+wget https://openresty.org/download/openresty-1.19.9.1.tar.gz
+tar -xzvf openresty-1.19.9.1.tar.gz
+cd openresty-1.19.9.1
+#./configure --prefix=/opt/openresty \
+#            --with-luajit \
+#            --without-http_redis2_module \
+#            --with-http_iconv_module \
+#            --with-pcre-jit \
+#            --with-cc-opt="-I/usr/local/opt/openssl/include/ -I/usr/local/opt/pcre/include/" \
+#            --with-ld-opt="-L/usr/local/opt/openssl/lib/ -L/usr/local/opt/pcre/lib/" \
+#            -j8
+
+./configure --with-luajit \
+            --without-http_redis2_module \
+            --with-http_iconv_module \
+            --with-pcre-jit \
+            --with-openssl=/usr/local/src/openssl-1.1.1m \
+            --with-pcre=/usr/local/src/pcre2-10.39 -j4
+            
+make -j2
+#make install
+
+
+# better also add the following line to your ~/.bashrc or ~/.bash_profile file.
+export PATH=/usr/local/openresty/bin:$PATH
 
 
 
