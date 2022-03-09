@@ -134,6 +134,21 @@ make
 
 
 
+#cd /usr/local/src
+#wget http://luajit.org/download/LuaJIT-2.0.5.tar.gz 
+#tar -zxvf LuaJIT-2.0.5.tar.gz
+#cd LuaJIT-2.0.5
+#make && make install PREFIX=/usr/local/LuaJIT
+
+dnf install luajit luajit-devel -y
+
+cd /usr/local/src/nginx/modules/
+wget https://github.com/openresty/lua-nginx-module/archive/refs/tags/v0.10.12.tar.gz
+mv v0.10.12.tar.gz lua-nginx-module-0.10.12.tar.gz
+tar xvfz lua-nginx-module-0.10.12.tar.gz
+
+
+
 
 cd /usr/local/src/
 curl -O http://nginx.org/download/nginx-1.21.6.tar.gz
@@ -191,7 +206,8 @@ mkdir -p /etc/nginx
 --with-http_geoip_module \
 --add-module=/usr/local/src/nginx/modules/ngx_brotli \
 --add-dynamic-module=/usr/local/src/nginx/modules/ngx_http_geoip2_module \
---add-dynamic-module=/usr/local/src/nginx/modules/headers-more-nginx-module
+--add-dynamic-module=/usr/local/src/nginx/modules/headers-more-nginx-module \
+--add-module=/usr/local/src/nginx/modules/lua-nginx-module-0.10.12
 
 make
 make install
