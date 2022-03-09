@@ -45,9 +45,9 @@ cd /usr/local/src/
 #cd libmaxminddb/
 #./bootstrap
 
-wget https://github.com/maxmind/libmaxminddb/releases/download/1.4.2/libmaxminddb-1.4.2.tar.gz
-tar xvfz libmaxminddb-1.4.2.tar.gz
-cd libmaxminddb-1.4.2
+wget https://github.com/maxmind/libmaxminddb/releases/download/1.6.0/libmaxminddb-1.6.0.tar.gz
+tar xvfz libmaxminddb-1.6.0.tar.gz
+cd libmaxminddb-1.6.0
 ./configure
 make
 make check
@@ -57,7 +57,7 @@ ldconfig
 
 
 dnf install geoipupdate -y
-dnf install https://github.com/maxmind/geoipupdate/releases/download/v4.3.0/geoipupdate_4.3.0_linux_amd64.rpm -y
+dnf install https://github.com/maxmind/geoipupdate/releases/download/v4.9.0/geoipupdate_4.9.0_linux_amd64.rpm -y
 
 
 
@@ -70,9 +70,9 @@ git clone https://github.com/leev/ngx_http_geoip2_module.git
 
 
 cd /usr/local/src/
-wget https://www.openssl.org/source/openssl-1.1.1g.tar.gz
-tar -zxf openssl-1.1.1g.tar.gz
-cd openssl-1.1.1g
+wget https://www.openssl.org/source/openssl-1.1.1m.tar.gz
+tar -zxf openssl-1.1.1m.tar.gz
+cd openssl-1.1.1m
 ./config
 
 make
@@ -82,9 +82,10 @@ make
 
 
 cd /usr/local/src/
-wget ftp://ftp.pcre.org/pub/pcre/pcre-8.44.tar.gz
-tar -zxf pcre-8.44.tar.gz
-cd pcre-8.44
+#wget ftp://ftp.pcre.org/pub/pcre/pcre-8.44.tar.gz
+wget https://github.com/PhilipHazel/pcre2/releases/download/pcre2-10.39/pcre2-10.39.tar.gz
+tar -zxf pcre2-10.39.tar.gz
+cd pcre2-10.39
 #./configure
 ./configure --prefix=/usr --libdir=/usr/lib64 --enable-unicode-properties --enable-pcre16 --enable-pcre32 --enable-pcregrep-libz --disable-static --enable-utf8 --enable-shared
 make
@@ -106,8 +107,8 @@ make
 
 
 cd /usr/local/src/
-curl -O http://nginx.org/download/nginx-1.19.2.tar.gz
-tar xvzf nginx-1.19.2.tar.gz
+curl -O http://nginx.org/download/nginx-1.21.6.tar.gz
+tar xvzf nginx-1.21.6.tar.gz
 ln -s /usr/lib64/nginx/modules /etc/nginx/
 cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.19.2
 mkdir -p /var/cache/nginx/client_temp
