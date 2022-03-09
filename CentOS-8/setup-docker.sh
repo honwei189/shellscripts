@@ -1,21 +1,21 @@
 #!/bin/sh
 ###
  # @description       : Docker installation script
- # @version           : "1.0.0" 
+ # @version           : "1.0.1" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 08/04/2020 12:05:59
- # @last modified     : 08/04/2020 12:06:36
+ # @last modified     : 09/03/2022 19:01:36
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
  
 dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 
 #For CentOS 8.1
-dnf clean all 
-dnf -y remove podman
-#dnf -y install oci-systemd-hook libvarlink
-#rpm -Uvh --nodeps $(repoquery --location podman)
-dnf install -y @container-tools
+#dnf clean all 
+#dnf -y remove podman
+##dnf -y install oci-systemd-hook libvarlink
+##rpm -Uvh --nodeps $(repoquery --location podman)
+#dnf install -y @container-tools
 
 #dnf install docker-ce --nobest -y
 dnf install docker-ce --allowerasing -y
