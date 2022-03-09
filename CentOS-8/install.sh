@@ -243,7 +243,8 @@ echo "extension=brotli.so" >> /etc/php.d/20-brotli.ini
 
 cd /usr/local/src/php/modules/
 mkdir sourceguardian && cd sourceguardian
-wget loaders.linux-x86_64.tar.gz #download from https://www.sourceguardian.com/loaders.html
+#wget loaders.linux-x86_64.tar.gz #download from https://www.sourceguardian.com/loaders.html
+wget https://github.com/honwei189/shellscripts/raw/master/php/loaders.linux-x86_64.tar.gz
 tar xvfz loaders.linux-x86_64.tar.gz
 cp ixed.8.1.lin /usr/lib64/php/modules/
 echo "zend_extension = ixed.8.1.lin" >> /etc/php.d/00-sourceguardian.ini
