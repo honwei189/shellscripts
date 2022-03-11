@@ -209,8 +209,8 @@ mkdir -p /etc/nginx
 --with-http_geoip_module \
 --add-module=/usr/local/src/nginx/modules/ngx_brotli \
 --add-dynamic-module=/usr/local/src/nginx/modules/ngx_http_geoip2_module \
---add-dynamic-module=/usr/local/src/nginx/modules/headers-more-nginx-module \
---add-module=/usr/local/src/nginx/modules/lua-nginx-module-0.10.12
+--add-dynamic-module=/usr/local/src/nginx/modules/headers-more-nginx-module
+#--add-module=/usr/local/src/nginx/modules/lua-nginx-module-0.10.12
 
 make
 make install
