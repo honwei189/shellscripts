@@ -1,21 +1,24 @@
 #!/bin/sh
 ###
- # @description       : Add dynamic host / IP into firewall trusted list allows connecting server without any restriction.
- #                      Applicable for CentOS 7 and above only
- # @installation      : ln -s dynamicip-fw.sh /usr/bin/dynamicip-fw
- #                      or;
- #                      mv dynamicip-fw.sh /usr/bin/dynamicip-fw
- #                      chmod +x /usr/bin/dynamicip-fw
- #                      crontab (automatically run hourly):  0 * * * * /usr/bin/dynamicip-fw refresh >/dev/null 2>&1
- # @usage             : dynamicip-fw add HOSTNAME
- #                      dynamicip-fw del HOSTNAME
- #                      dynamicip-fw delete HOSTNAME
- #                      dynamicip-fw refresh
- # @version           : "1.0.0"
- # @creator           : Gordon Lim <honwei189@gmail.com>
- # @created           : 25/04/2020 12:27:17
- # @last modified     : 07/09/2020 20:40:18
- # @last modified by  : Gordon Lim <honwei189@gmail.com>
+# @description       : Add dynamic host / IP into firewall trusted list allows SSH into server without any restriction
+#                      Add dynamic host into SSHD configuration allows SSH into server with password
+#                      Applicable for CentOS based system ( v7.x, v8.x, Oracle Linux 8.x, AlmaLinux 8.x, RockyLinux 8.x )
+# @installation      : ln -s dynamicip-fw.sh /usr/bin/dynamicip-fw
+#                      or;
+#                      mv dynamicip-fw.sh /usr/bin/dynamicip-fw
+#                      chmod +x /usr/bin/dynamicip-fw
+#                      echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+#                      echo "Include /etc/ssh/hosts/*.conf" >> /etc/ssh/sshd_config
+#                      crontab (automatically run hourly):  0 * * * * /usr/bin/dynamicip-fw refresh >/dev/null 2>&1
+# @usage             : dynamicip-fw add HOSTNAME
+#                      dynamicip-fw del HOSTNAME
+#                      dynamicip-fw delete HOSTNAME
+#                      dynamicip-fw refresh
+# @version           : "1.0.0"
+# @creator           : Gordon Lim <honwei189@gmail.com>
+# @created           : 25/04/2020 12:27:17
+# @last modified     : 04/10/2022 09:57:00
+# @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
 # Source function library.
@@ -27,13 +30,19 @@
 DYNAMIC_IP_PATH="/etc/dynamicip"
 HOSTS="$DYNAMIC_IP_PATH/hosts"
 IP_LIST="$DYNAMIC_IP_PATH/ips"
-
+OS_VER=$(cat /etc/redhat-release | tr -dc '0-9.' | cut -d \. -f1)
 ##########
 
 # restart_fw=0
 
 if [ ! -d $DYNAMIC_IP_PATH ]; then
     mkdir -p $DYNAMIC_IP_PATH
+fi
+
+if [ "$OS_VER" -ge '8' ]; then
+    if [ ! -d /etc/ssh/hosts ]; then
+        mkdir -p /etc/ssh/hosts
+    fi
 fi
 
 if [ ! -f $HOSTS ]; then
@@ -51,7 +60,7 @@ SETCOLOR_WARNING="echo -en \\033[1;33m"
 SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
 add() {
-    if [ "$1" == "" ];then
+    if [ "$1" == "" ]; then
         help
         exit 1
     fi
@@ -70,16 +79,29 @@ add() {
             ip=$1
             is_ip=1
         else
-            ip=$(host $1 | awk '/has address/ { print $4 }')
+            #ip=$(host $1 | awk '/has address/ { print $4 }')
+            ip=$(nslookup $1 8.8.8.8 | awk '/Address: / { print $2 }')
         fi
 
         echo "$1:$ip" >>$IP_LIST
-        
+
+        if [ "$OS_VER" == "7" ]; then
+            echo "$ip	$1" >>/etc/hosts
+
+            echo "Match Host $1
+	PasswordAuthentication yes" >>"/etc/ssh/sshd_config"
+        else
+            echo "Match Host $ip
+	PasswordAuthentication yes" >"/etc/ssh/hosts/$1.conf"
+        fi
+
+        service sshd reload
+
         # firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
         # #firewall-cmd --refresh > /dev/null 2>&1
         # firewall-cmd --reload > /dev/null 2>&1
 
-        firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
+        firewall-cmd --add-source=$ip --zone=trusted >/dev/null 2>&1
 
         echo ""
 
@@ -118,7 +140,7 @@ add() {
 }
 
 delete() {
-    if [ "$1" == "" ];then
+    if [ "$1" == "" ]; then
         help
         exit 1
     fi
@@ -149,16 +171,27 @@ delete() {
         sed --in-place "/$1/d" $HOSTS
         sed --in-place "/$1/d" $IP_LIST
 
+        if [ "$OS_VER" == "7" ]; then
+            sed --in-place "/$1/d" /etc/hosts
+            sed --in-place "/Match Host $1/,+2d" /etc/ssh/sshd_config
+        else
+            rm -rf "/etc/ssh/hosts/$1.conf"
+        fi
+
+        service sshd reload
+
         if [ $is_ip -eq 1 ]; then
             ip=$1
         else
-            ip=$(host $1 | awk '/has address/ { print $4 }')
+            #ip=$(host $1 | awk '/has address/ { print $4 }')
+            #ip=$(nslookup $1 8.8.8.8 | awk '/Address: / { print $2 }')
+            ip=$(dig +short $1 @8.8.8.8)
         fi
-        
+
         # firewall-cmd --permanent --remove-source=$ip --zone=trusted > /dev/null 2>&1
         ##firewall-cmd --refresh > /dev/null 2>&1
         #firewall-cmd --reload > /dev/null 2>&1
-        firewall-cmd --remove-source=$ip --zone=trusted > /dev/null 2>&1
+        firewall-cmd --remove-source=$ip --zone=trusted >/dev/null 2>&1
 
         echo ""
         if [ $is_ip -eq 1 ]; then
@@ -170,7 +203,7 @@ delete() {
             $SETCOLOR_FAILURE
             echo -n "$1 - $ip"
         fi
-        
+
         $SETCOLOR_SUCCESS
         echo " has been removed from trusted network successfully"
         $SETCOLOR_NORMAL
@@ -179,16 +212,17 @@ delete() {
     fi
 }
 
-list(){
+list() {
     echo ""
     $SETCOLOR_SUCCESS
     echo "[ Dynamic HOSTS list ]"
     $SETCOLOR_NORMAL
     echo ""
-    
+
     for host in $(cat $IP_LIST); do
         hostname=$(echo $host | cut -d":" -f1)
-        ip=$(echo $host | cut -d":" -f2)
+        #ip=$(echo $host | cut -d":" -f2)
+        ip=$(nslookup $host 8.8.8.8 | awk '/Address: / { print $2 }')
         $SETCOLOR_FAILURE
         echo -en "$hostname \t\t "
 
@@ -198,19 +232,21 @@ list(){
             $SETCOLOR_SUCCESS
             echo "$ip"
         fi
-        
+
         $SETCOLOR_NORMAL
     done
-    
+
     echo ""
     echo ""
 }
 
 refresh() {
     for host in $(cat $HOSTS); do
-        ip=$(host $host | awk '/has address/ { print $4 }')
+        #ip=$(host $host | awk '/has address/ { print $4 }')
+        ip=$(nslookup $host 8.8.8.8 | awk '/Address: / { print $2 }')
+        #ip=$(dig +short $host @8.8.8.8)
         find=$(cat $IP_LIST | grep "$host")
-        
+
         if [ "$find" == "" ]; then
             echo "$host:$ip" >>$IP_LIST
             # echo ""
@@ -230,6 +266,16 @@ refresh() {
                 cmd="sed -i 's/${find}/$host:$ip/g' $IP_LIST"
                 eval "$cmd"
 
+                if [ "$OS_VER" == "7" ]; then
+                    sed --in-place "/$host/d" /etc/hosts
+                    echo "$ip	$host" >>/etc/hosts
+                else
+                    echo "Match Host $ip
+    PasswordAuthentication yes" >"/etc/ssh/hosts/$host.conf"
+                fi
+
+                service sshd reload
+
                 #old_ip=$(echo $old_ip | cut -d"." -f1-3)
                 #old_ip=$(echo $old_ip".0")
                 #base_ip=$(echo $ip | cut -d"." -f1-3)
@@ -239,7 +285,7 @@ refresh() {
 
                 if [ "$fw" != "" ]; then
                     # firewall-cmd --permanent --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
-                    firewall-cmd --remove-source=$old_ip --zone=trusted > /dev/null 2>&1
+                    firewall-cmd --remove-source=$old_ip --zone=trusted >/dev/null 2>&1
                     # restart_fw=1
                 fi
 
@@ -247,15 +293,15 @@ refresh() {
 
                 if [ "$fw" == "" ]; then
                     # firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
-                    firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
+                    firewall-cmd --add-source=$ip --zone=trusted >/dev/null 2>&1
                     # restart_fw=1
                 fi
             else
                 fw=$(firewall-cmd --zone=trusted --list-sources | grep "$ip")
 
-                if [ "$fw" == "" ]; then                
+                if [ "$fw" == "" ]; then
                     # firewall-cmd --permanent --add-source=$ip --zone=trusted > /dev/null 2>&1
-                    firewall-cmd --add-source=$ip --zone=trusted > /dev/null 2>&1
+                    firewall-cmd --add-source=$ip --zone=trusted >/dev/null 2>&1
                     # restart_fw=1
 
                     # oldfw=$(firewall-cmd --zone=trusted --list-sources | grep "$old_ip")
