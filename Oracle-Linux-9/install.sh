@@ -351,6 +351,13 @@ mkdir $HOME/go
 echo "" >> ~/.bashrc
 echo "export PATH=\"\$PATH:~/go/bin/\"" >> ~/.bashrc
 
+echo "" >> /etc/ssh/sshd_config
+echo "PubkeyAcceptedKeyTypes=+ssh-rsa" >> /etc/ssh/sshd_config
+echo "" >> /etc/ssh/sshd_config
+
+sed -i "s|#PubkeyAuthentication yes|PermitRootLogin yes\nPubkeyAuthentication yes|g" /etc/ssh/sshd_config
+service sshd restart
+
 ##########
 
 echo "Create an user as root"
