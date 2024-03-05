@@ -253,11 +253,22 @@ chkconfig nginx on
 
 dnf install svn -y
 
-cd ~/
-svn export "$(sed 's/tree\/master/trunk/' <<< "https://github.com/honwei189/shellscripts/tree/master/etc/nginx")"
-cp -Rp /etc/nginx /root/nginx_bak
-yes | cp -Rp nginx /etc/
-rm -rf nginx
+# cd ~/
+# svn export "$(sed 's/tree\/master/trunk/' <<< "https://github.com/honwei189/shellscripts/tree/master/etc/nginx")"
+# cp -Rp /etc/nginx /root/nginx_bak
+# yes | cp -Rp nginx /etc/
+# rm -rf nginx
+
+cd /etc/
+mv nginx /root/
+git clone --no-checkout https://github.com/honwei189/shellscripts.git
+cd shellscripts
+git sparse-checkout init --cone
+git sparse-checkout set etc/nginx
+git checkout
+mv etc/nginx/ /etc/
+cd .. && rm -rf shellscripts
+
 
 
 ##########
