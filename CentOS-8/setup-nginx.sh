@@ -57,7 +57,7 @@ ldconfig
 
 
 dnf install geoipupdate -y
-dnf install https://github.com/maxmind/geoipupdate/releases/download/v4.9.0/geoipupdate_4.9.0_linux_amd64.rpm -y
+dnf install https://github.com/maxmind/geoipupdate/releases/download/v6.1.0/geoipupdate_6.1.0_linux_arm64.rpm -y
 
 
 
