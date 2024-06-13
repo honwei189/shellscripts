@@ -1,6 +1,6 @@
 #!/bin/sh
 ###
- # @description       : Install NGINX with HTTP 2 and GeoIP databases
+ # @description       : Install NGINX with HTTP 2 & 3 and GeoIP databases
  # @version           : "1.0.2" 
  # @creator           : Gordon Lim <honwei189@gmail.com>
  # @created           : 03/04/2020 10:07:08
