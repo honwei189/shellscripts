@@ -70,67 +70,67 @@ git clone https://github.com/leev/ngx_http_geoip2_module.git
 
 
 
-cd /usr/local/src/
-wget https://www.openssl.org/source/openssl-1.1.1m.tar.gz
-tar -zxf openssl-1.1.1m.tar.gz
-cd openssl-1.1.1m
-./config
+# cd /usr/local/src/
+# wget https://www.openssl.org/source/openssl-1.1.1m.tar.gz
+# tar -zxf openssl-1.1.1m.tar.gz
+# cd openssl-1.1.1m
+# ./config
 
-make
-#make install
-
-
-
-
-cd /usr/local/src/
-#wget ftp://ftp.pcre.org/pub/pcre/pcre-8.44.tar.gz
-wget https://github.com/PhilipHazel/pcre2/releases/download/pcre2-10.39/pcre2-10.39.tar.gz
-tar -zxf pcre2-10.39.tar.gz
-cd pcre2-10.39
-#./configure
-./configure --prefix=/usr --libdir=/usr/lib64 --enable-unicode-properties --enable-pcre16 --enable-pcre32 --enable-pcregrep-libz --disable-static --enable-utf8 --enable-shared
-make
-#make install
+# make
+# #make install
 
 
 
 
-cd /usr/local/src/nginx/modules/
-wget https://openresty.org/download/openresty-1.19.9.1.tar.gz
-tar -xzvf openresty-1.19.9.1.tar.gz
-cd openresty-1.19.9.1
-#./configure --prefix=/opt/openresty \
-#            --with-luajit \
-#            --without-http_redis2_module \
-#            --with-http_iconv_module \
-#            --with-pcre-jit \
-#            --with-cc-opt="-I/usr/local/opt/openssl/include/ -I/usr/local/opt/pcre/include/" \
-#            --with-ld-opt="-L/usr/local/opt/openssl/lib/ -L/usr/local/opt/pcre/lib/" \
-#            -j8
+# cd /usr/local/src/
+# #wget ftp://ftp.pcre.org/pub/pcre/pcre-8.44.tar.gz
+# wget https://github.com/PhilipHazel/pcre2/releases/download/pcre2-10.39/pcre2-10.39.tar.gz
+# tar -zxf pcre2-10.39.tar.gz
+# cd pcre2-10.39
+# #./configure
+# ./configure --prefix=/usr --libdir=/usr/lib64 --enable-unicode-properties --enable-pcre16 --enable-pcre32 --enable-pcregrep-libz --disable-static --enable-utf8 --enable-shared
+# make
+# #make install
 
-./configure --with-luajit \
-            --without-http_redis2_module \
-            --with-http_iconv_module \
-            --with-pcre-jit \
-            --with-openssl=/usr/local/src/openssl-1.1.1m \
-            --with-pcre=/usr/local/src/pcre2-10.39 -j4
+
+
+
+# cd /usr/local/src/nginx/modules/
+# wget https://openresty.org/download/openresty-1.19.9.1.tar.gz
+# tar -xzvf openresty-1.19.9.1.tar.gz
+# cd openresty-1.19.9.1
+# #./configure --prefix=/opt/openresty \
+# #            --with-luajit \
+# #            --without-http_redis2_module \
+# #            --with-http_iconv_module \
+# #            --with-pcre-jit \
+# #            --with-cc-opt="-I/usr/local/opt/openssl/include/ -I/usr/local/opt/pcre/include/" \
+# #            --with-ld-opt="-L/usr/local/opt/openssl/lib/ -L/usr/local/opt/pcre/lib/" \
+# #            -j8
+
+# ./configure --with-luajit \
+#             --without-http_redis2_module \
+#             --with-http_iconv_module \
+#             --with-pcre-jit \
+#             --with-openssl=/usr/local/src/openssl-1.1.1m \
+#             --with-pcre=/usr/local/src/pcre2-10.39 -j4
             
-make -j2
-#make install
+# make -j2
+# #make install
 
 
-# better also add the following line to your ~/.bashrc or ~/.bash_profile file.
-export PATH=/usr/local/openresty/bin:$PATH
+# # better also add the following line to your ~/.bashrc or ~/.bash_profile file.
+# export PATH=/usr/local/openresty/bin:$PATH
 
 
 
-cd /usr/local/src
-wget http://zlib.net/zlib-1.2.11.tar.gz
-tar -zxf zlib-1.2.11.tar.gz
-cd zlib-1.2.11
-./configure
-make
-#make install
+# cd /usr/local/src
+# wget http://zlib.net/zlib-1.2.11.tar.gz
+# tar -zxf zlib-1.2.11.tar.gz
+# cd zlib-1.2.11
+# ./configure
+# make
+# #make install
 
 
 
@@ -146,18 +146,18 @@ export LUAJIT_INC=/usr/include/luajit-2.1;
 
 
 cd /usr/local/src/nginx/modules/
-wget https://github.com/openresty/lua-nginx-module/archive/refs/tags/v0.10.12.tar.gz
-mv v0.10.12.tar.gz lua-nginx-module-0.10.12.tar.gz
-tar xvfz lua-nginx-module-0.10.12.tar.gz
+wget https://github.com/openresty/lua-nginx-module/archive/refs/tags/v0.10.26.tar.gz
+mv v0.10.26.tar.gz lua-nginx-module-0.10.26.tar.gz
+tar xvfz lua-nginx-module-0.10.26.tar.gz
 
 
 
 
 cd /usr/local/src/
-curl -O http://nginx.org/download/nginx-1.21.6.tar.gz
-tar xvzf nginx-1.21.6.tar.gz
+curl -O http://nginx.org/download/nginx-1.24.0.tar.gz
+tar xvzf nginx-1.24.0.tar.gz
 ln -s /usr/lib64/nginx/modules /etc/nginx/
-cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.21.6
+cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.24.0
 mkdir -p /var/cache/nginx/client_temp
 mkdir -p /etc/nginx
 
@@ -181,6 +181,7 @@ mkdir -p /etc/nginx
 --with-file-aio \
 --with-http_ssl_module \
 --with-http_v2_module \
+--with-http_v3_module \
 --with-http_realip_module \
 --with-http_addition_module \
 --with-http_xslt_module=dynamic \
@@ -209,8 +210,8 @@ mkdir -p /etc/nginx
 --with-http_geoip_module \
 --add-module=/usr/local/src/nginx/modules/ngx_brotli \
 --add-dynamic-module=/usr/local/src/nginx/modules/ngx_http_geoip2_module \
---add-dynamic-module=/usr/local/src/nginx/modules/headers-more-nginx-module
-#--add-module=/usr/local/src/nginx/modules/lua-nginx-module-0.10.12
+--add-dynamic-module=/usr/local/src/nginx/modules/headers-more-nginx-module \
+--add-module=/usr/local/src/nginx/modules/lua-nginx-module-0.10.26
 
 make
 make install
@@ -260,7 +261,7 @@ dnf install svn -y
 # rm -rf nginx
 
 cd /etc/
-mv nginx /root/
+cp -Rp nginx /root/
 git clone --no-checkout https://github.com/honwei189/shellscripts.git
 cd shellscripts
 git sparse-checkout init --cone
@@ -269,7 +270,12 @@ git checkout
 mv etc/nginx/ /etc/
 cd .. && rm -rf shellscripts
 
-
+mkdir -p /usr/share/GeoIP/
+cd /usr/share/GeoIP/
+wget https://git.io/GeoLite2-ASN.mmdb
+wget https://git.io/GeoLite2-City.mmdb
+wget https://git.io/GeoLite2-Country.mmdb
+cd ~
 
 ##########
 
