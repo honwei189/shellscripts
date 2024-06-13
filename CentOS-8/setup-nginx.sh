@@ -144,6 +144,16 @@ dnf install luajit luajit-devel -y
 export LUAJIT_LIB=/usr/lib64;
 export LUAJIT_INC=/usr/include/luajit-2.1;
 
+yum install yum-utils -y
+yum-config-manager --add-repo https://openresty.org/package/centos/openresty.repo
+yum install --nogpgcheck openresty -y
+# Or
+# curl -O https://openresty.org/package/pubkey.gpg
+# rpm --import pubkey.gpg
+# yum install openresty -y
+
+export LUAJIT_LIB=/usr/local/openresty/luajit/lib
+export LUAJIT_INC=/usr/local/openresty/luajit/include/luajit-2.1
 
 cd /usr/local/src/nginx/modules/
 wget https://github.com/openresty/lua-nginx-module/archive/refs/tags/v0.10.26.tar.gz
@@ -276,6 +286,35 @@ wget https://git.io/GeoLite2-ASN.mmdb
 wget https://git.io/GeoLite2-City.mmdb
 wget https://git.io/GeoLite2-Country.mmdb
 cd ~
+
+CONFIG_FILE="/etc/nginx/nginx.conf"
+SEARCH_PATH="lua_package_path \"/usr/local/openresty/lualib/?.lua;;\";"
+SEARCH_CPATH="lua_package_cpath \"/usr/local/openresty/lualib/?.so;;\";"
+INSERT_PATH="    lua_package_path \"/usr/local/openresty/lualib/?.lua;;\";"
+INSERT_CPATH="   lua_package_cpath \"/usr/local/openresty/lualib/?.so;;\";"
+
+# Function to check if a pattern exists in the file
+check_pattern() {
+    grep -q "$1" "$CONFIG_FILE"
+}
+
+# Function to add lua_package_path and lua_package_cpath if not exists
+add_lua_package() {
+    if ! check_pattern "$SEARCH_PATH"; then
+        sudo sed -i "/http {/a\\$INSERT_PATH" "$CONFIG_FILE"
+    fi
+
+    if ! check_pattern "$SEARCH_CPATH"; then
+        sudo sed -i "/http {/a\\$INSERT_CPATH" "$CONFIG_FILE"
+    fi
+}
+
+# Run the function
+add_lua_package
+
+# Verify and reload nginx configuration
+sudo nginx -t && sudo systemctl reload nginx
+
 
 ##########
 
