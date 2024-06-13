@@ -282,6 +282,8 @@ cd .. && rm -rf shellscripts
 
 mkdir -p /usr/share/GeoIP/
 cd /usr/share/GeoIP/
+
+# Browse https://github.com/P3TERX/GeoLite.mmdb?tab=readme-ov-file
 wget https://git.io/GeoLite2-ASN.mmdb
 wget https://git.io/GeoLite2-City.mmdb
 wget https://git.io/GeoLite2-Country.mmdb
