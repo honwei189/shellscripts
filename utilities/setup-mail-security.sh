@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# setup_mail_security.sh
+# setup-mail-security.sh
 #
 # Purpose:
 # This script configures DKIM, SPF, and DMARC for a specified domain on a server running either Sendmail or Postfix,
@@ -8,11 +8,11 @@
 # If a Cloudflare API token is provided, it will automatically add the necessary DNS records.
 #
 # Usage:
-# ./setup_mail_security.sh -d <domain> -s <selector> [-t <cloudflare_api_token>]
+# ./setup-mail-security.sh -d <domain> -s <selector> [-t <cloudflare_api_token>]
 # 
 # Parameters:
-# -d <domain>             : The base domain name (e.g., yourdomain.com)
-# -s <selector>           : DKIM selector (e.g., default)
+# -d <domain>             : The base domain name (e.g., yourdomain.com or sub.yourdomain.com)
+# -s <selector>           : DKIM selector (e.g., default or mysub)
 # -t <cloudflare_api_token> : (Optional) Cloudflare API token for automatically adding DNS records
 #
 # Supported Mail Servers:
@@ -26,26 +26,59 @@
 # Additional modifications would be needed to support those mail servers.
 #
 # Steps:
-# 1. Install Necessary Packages: Ensures that required packages (epel-release, opendkim, opendkim-tools, jq, curl) are installed.
+# 1. Check and Install Necessary Packages: Ensures that required packages (epel-release, opendkim, opendkim-tools, jq, curl) are installed if not already present.
 # 2. Detect Mail Service: Checks if sendmail or postfix is installed. If neither is found, it installs sendmail.
-# 3. Generate DKIM Keys: Generates DKIM keys if they do not already exist.
+# 3. Generate or Regenerate DKIM Keys: Generates or regenerates DKIM keys.
 # 4. Configure OpenDKIM: Creates and populates the OpenDKIM configuration file and required tables.
 # 5. Configure Mail Service: Configures sendmail or postfix to use OpenDKIM for signing emails.
 # 6. Restart Services: Restarts OpenDKIM and the mail service to apply the configuration.
 # 7. Add DNS Records: Extracts the DKIM public key and adds the necessary DKIM, SPF, and DMARC records to Cloudflare if an API token is provided,
 #    or displays the records to be added manually.
 # 8. Configure Firewall: Ensures necessary ports are open for mail services and OpenDKIM.
+# 9. Rollback Changes: In case of failure, revert the changes to the previous state.
+# 10. Display Key Locations: Shows the paths to the generated DKIM private and public key files.
 
 set -e
+
+# Backup function to create backups of configuration files
+backup_file() {
+    local file=$1
+    if [ -f "$file" ]; then
+        cp "$file" "$file.bak"
+    fi
+}
+
+# Restore function to restore configuration files from backups
+restore_file() {
+    local file=$1
+    if [ -f "$file.bak" ]; then
+        mv "$file.bak" "$file"
+    fi
+}
 
 # Function to print usage
 print_usage() {
     echo "Usage: $0 -d <domain> -s <selector> [-t <cloudflare_api_token>]"
-    echo "  -d <domain>    : The base domain name (e.g., yourdomain.com)"
-    echo "  -s <selector>  : DKIM selector (e.g., default)"
+    echo "  -d <domain>    : The base domain name (e.g., yourdomain.com or sub.yourdomain.com)"
+    echo "  -s <selector>  : DKIM selector (e.g., default or mysub)"
     echo "  -t <cloudflare_api_token> : (Optional) Cloudflare API token"
     exit 1
 }
+
+# Rollback function to restore configurations in case of failure
+rollback() {
+    echo "Rolling back changes..."
+    restore_file /etc/opendkim.conf
+    restore_file /etc/mail/sendmail.mc
+    restore_file /etc/postfix/main.cf
+    systemctl restart sendmail || true
+    systemctl restart postfix || true
+    systemctl restart opendkim || true
+    echo "Rollback completed."
+}
+
+# Trap any error and initiate rollback
+trap 'rollback' ERR
 
 # Get parameters
 while getopts ":d:s:t:" opt; do
@@ -69,10 +102,24 @@ if [ -z "${BASE_DOMAIN}" ] || [ -z "${SELECTOR}" ]; then
     print_usage
 fi
 
+# Function to check and install necessary packages
+install_package() {
+    local package=$1
+    if ! rpm -q $package &> /dev/null; then
+        echo "Installing package: $package"
+        yum install -y $package
+    else
+        echo "Package $package already installed"
+    fi
+}
+
 # Install necessary packages
-echo "Installing necessary packages..."
-yum install -y epel-release
-yum install -y opendkim opendkim-tools jq curl
+echo "Checking and installing necessary packages..."
+install_package epel-release
+install_package opendkim
+install_package opendkim-tools
+install_package jq
+install_package curl
 
 # Detect and install mail service if not present
 MAIL_SERVICE=""
@@ -82,32 +129,38 @@ elif command -v postfix &> /dev/null; then
     MAIL_SERVICE="postfix"
 else
     # Default to sendmail if no mail service is installed
-    yum install -y sendmail sendmail-cf
+    install_package sendmail
+    install_package sendmail-cf
     MAIL_SERVICE="sendmail"
 fi
 
 echo "Mail service detected: $MAIL_SERVICE"
 
+# Function to check if a firewall port is already open
+is_port_open() {
+    local port=$1
+    firewall-cmd --list-ports | grep -q "${port}/tcp"
+}
+
 # Configure firewall to open necessary ports
 echo "Configuring firewall..."
-sudo firewall-cmd --permanent --add-port=25/tcp
-sudo firewall-cmd --permanent --add-port=587/tcp
-sudo firewall-cmd --permanent --add-port=8891/tcp
-sudo firewall-cmd --reload
+for port in 25 587 8891; do
+    if ! is_port_open $port; then
+        firewall-cmd --permanent --add-port=${port}/tcp
+    fi
+done
+firewall-cmd --reload
 
-# Generate DKIM keys if they do not exist
-if [ ! -f /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.private ]; then
-    echo "Generating DKIM keys..."
-    mkdir -p /etc/opendkim/keys/${BASE_DOMAIN}
-    opendkim-genkey -b 2048 -d ${BASE_DOMAIN} -D /etc/opendkim/keys/${BASE_DOMAIN} -s ${SELECTOR} -v
-    chown -R opendkim:opendkim /etc/opendkim/keys/${BASE_DOMAIN}
-    mv /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.private /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key
-else
-    echo "DKIM keys already exist. Skipping generation."
-fi
+# Generate or regenerate DKIM keys
+echo "Generating or regenerating DKIM keys..."
+mkdir -p /etc/opendkim/keys/${BASE_DOMAIN}
+opendkim-genkey -b 2048 -d ${BASE_DOMAIN} -D /etc/opendkim/keys/${BASE_DOMAIN} -s ${SELECTOR} -v
+chown -R opendkim:opendkim /etc/opendkim/keys/${BASE_DOMAIN}
+mv /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.private /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key
 
 # Configure OpenDKIM
 echo "Configuring OpenDKIM..."
+backup_file /etc/opendkim.conf
 cat > /etc/opendkim.conf <<EOL
 AutoRestart             Yes
 AutoRestartRate         10/1h
@@ -145,8 +198,9 @@ fi
 # Configure mail service
 configure_sendmail() {
     echo "Configuring Sendmail..."
+    backup_file /etc/mail/sendmail.mc
     if ! grep -q 'INPUT_MAIL_FILTER(`opendkim' /etc/mail/sendmail.mc; then
-        yum install -y sendmail sendmail-cf
+        install_package sendmail sendmail-cf
         cat > /etc/mail/sendmail.mc <<EOL
 divert(-1)dnl
 include(\`/usr/share/sendmail-cf/m4/cf.m4')dnl
@@ -192,6 +246,7 @@ EOL
 
 configure_postfix() {
     echo "Configuring Postfix..."
+    backup_file /etc/postfix/main.cf
     if ! postconf -n | grep -q "inet:localhost:8891"; then
         postconf -e "milter_default_action = accept"
         postconf -e "milter_protocol = 6"
@@ -268,5 +323,9 @@ else
     echo "Suggested DMARC record:"
     echo "_dmarc.${BASE_DOMAIN} IN TXT \"v=DMARC1; p=none; rua=mailto:dmarc-reports@${BASE_DOMAIN}\""
 fi
+
+# Display the locations of the DKIM keys
+echo "DKIM private key location: /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key"
+echo "DKIM public key location: /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.txt"
 
 echo "All configurations are complete. The DKIM setup is shared across all subdomains of ${BASE_DOMAIN}."
