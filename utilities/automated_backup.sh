@@ -7,7 +7,7 @@
 #
 # Configuration:
 # - BACKUP_PATH: Local backup directory
-# - CLONE_PATH: Remote backup directory
+# - CLONE_PATH: Remote backup directory or scp address (e.g., user@IP:/path)
 # - FULL_BACKUP_PATH: Directory for full backups
 # - INCREMENTAL_BACKUP_PATH: Directory for incremental backups
 # - BINLOG_BACKUP_PATH: Directory for MySQL binary log backups
@@ -40,7 +40,7 @@
 
 # Configuration
 BACKUP_PATH="/data/backup"
-CLONE_PATH="/nfs/nas"
+CLONE_PATH="/nfs/nas" # Can be local path or scp address (e.g., user@IP:/path)
 FULL_BACKUP_PATH="$BACKUP_PATH/full_backup"
 INCREMENTAL_BACKUP_PATH="$BACKUP_PATH/incremental"
 BINLOG_BACKUP_PATH="$BACKUP_PATH/mysql_incremental"
