@@ -8,7 +8,7 @@
 # If a Cloudflare API token is provided, it will automatically add the necessary DNS records.
 #
 # Usage:
-# ./setup-mail-security.sh -d <domain> -s <selector> [-t <cloudflare_api_token>] [-p <ports>] [-f <on|off>]
+# ./setup-mail-security.sh -d <domain> -s <selector> [-t <cloudflare_api_token>] [-p <ports>] [-f <on|off>] [--wildcard] [--import-keys <private_key_path> <public_key_path>|<archive_file>] [--export-keys <output_directory>|<archive_file>] [--keys-only]
 # 
 # Parameters:
 # -d <domain>             : The base domain name (e.g., yourdomain.com or sub.yourdomain.com)
@@ -16,29 +16,50 @@
 # -t <cloudflare_api_token> : (Optional) Cloudflare API token for automatically adding DNS records
 # -p <ports>              : (Optional) Comma-separated list of ports to open (e.g., 25,587)
 # -f <on|off>             : (Optional) Enable or disable firewall configuration (default: off)
+# --wildcard              : (Optional) Configure DKIM for all subdomains
+# --import-keys <private_key_path> <public_key_path>|<archive_file> : (Optional) Use existing DKIM keys instead of generating new ones
+# --export-keys <output_directory>|<archive_file> : (Optional) Export generated DKIM keys to the specified directory or archive file
+# --keys-only             : (Optional) Only import/export DKIM private and public keys, not other configurations
 #
-# Supported Mail Servers:
-# This script supports the following mail servers:
-# - Sendmail
-# - Postfix
-# If neither is found on the server, Sendmail will be installed by default.
-# 
-# Note:
-# Other mail servers such as Exim and qmail are not supported by this script. 
-# Additional modifications would be needed to support those mail servers.
+# Examples:
+# 1. Configure DKIM with Cloudflare API Token, enabling firewall configuration:
+#    ./setup-mail-security.sh -d mysub.yourdomain.com -s mysub -t YOUR_CLOUDFLARE_API_TOKEN -f on --wildcard
+#
+# 2. Configure DKIM without Cloudflare API Token and disabling firewall configuration:
+#    ./setup-mail-security.sh -d mysub.yourdomain.com -s mysub -f off --wildcard
+#
+# 3. Import existing DKIM keys:
+#    ./setup-mail-security.sh -d mysub.yourdomain.com -s mysub --import-keys /path/to/private.key /path/to/public.key
+#
+# 4. Export generated DKIM keys:
+#    ./setup-mail-security.sh -d mysub.yourdomain.com -s mysub --export-keys /path/to/output_directory
+#
+# 5. Import DKIM keys and configurations from an archive:
+#    ./setup-mail-security.sh -d mysub.yourdomain.com -s mysub --import-keys /path/to/archive.tar.gz
+#
+# 6. Export DKIM keys and configurations to an archive:
+#    ./setup-mail-security.sh -d mysub.yourdomain.com -s mysub --export-keys /path/to/output_archive.tar.gz
+#
+# 7. Only import DKIM private and public keys:
+#    ./setup-mail-security.sh -d mysub.yourdomain.com -s mysub --import-keys /path/to/private.key /path/to/public.key --keys-only
+#
+# 8. Only export DKIM private and public keys:
+#    ./setup-mail-security.sh -d mysub.yourdomain.com -s mysub --export-keys /path/to/output_directory --keys-only
 #
 # Steps:
 # 1. Check and Install Necessary Packages: Ensures that required packages (epel-release, opendkim, opendkim-tools, jq, curl) are installed if not already present.
 # 2. Detect Mail Service: Checks if sendmail or postfix is installed. If neither is found, it installs sendmail.
-# 3. Generate or Regenerate DKIM Keys: Generates or regenerates DKIM keys.
-# 4. Configure OpenDKIM: Creates and populates the OpenDKIM configuration file and required tables.
-# 5. Configure Mail Service: Configures sendmail or postfix to use OpenDKIM for signing emails.
-# 6. Restart Services: Restarts OpenDKIM and the mail service to apply the configuration.
-# 7. Add DNS Records: Extracts the DKIM public key and adds the necessary DKIM, SPF, and DMARC records to Cloudflare if an API token is provided,
+# 3. Generate or Regenerate DKIM Keys: Generates or regenerates DKIM keys or imports existing keys.
+# 4. Export DKIM Keys: Exports the generated DKIM keys if requested.
+# 5. Configure OpenDKIM: Creates and populates the OpenDKIM configuration file and required tables.
+# 6. Configure Mail Service: Configures sendmail or postfix to use OpenDKIM for signing emails.
+# 7. Restart Services: Restarts OpenDKIM and the mail service to apply the configuration.
+# 8. Add DNS Records: Extracts the DKIM public key and adds the necessary DKIM, SPF, and DMARC records to Cloudflare if an API token is provided,
 #    or displays the records to be added manually.
-# 8. Configure Firewall: Ensures necessary ports are open for mail services and OpenDKIM.
-# 9. Rollback Changes: In case of failure, revert the changes to the previous state.
-# 10. Display Key Locations: Shows the paths to the generated DKIM private and public key files.
+# 9. Configure Firewall: Ensures necessary ports are open for mail services and OpenDKIM.
+# 10. Rollback Changes: In case of failure, revert the changes to the previous state.
+# 11. Display Key Locations: Shows the paths to the generated or imported DKIM private and public key files.
+
 
 set -e
 
@@ -46,6 +67,10 @@ set -e
 OPENDKIM_PORT=8891
 DEFAULT_PORTS="25,587"
 DEFAULT_FIREWALL="off"
+WILDCARD=false
+IMPORT_KEYS=false
+EXPORT_KEYS=false
+KEYS_ONLY=false
 
 # Backup function to create backups of configuration files
 backup_file() {
@@ -58,19 +83,23 @@ backup_file() {
 # Restore function to restore configuration files from backups
 restore_file() {
     local file=$1
-    if [ -f "$file.bak" ]; then
+    if [ -f "$file.bak" ];then
         mv "$file.bak" "$file"
     fi
 }
 
 # Function to print usage
 print_usage() {
-    echo "Usage: $0 -d <domain> -s <selector> [-t <cloudflare_api_token>] [-p <ports>] [-f <on|off>]"
+    echo "Usage: $0 -d <domain> -s <selector> [-t <cloudflare_api_token>] [-p <ports>] [-f <on|off>] [--wildcard] [--import-keys <private_key_path> <public_key_path>|<archive_file>] [--export-keys <output_directory>|<archive_file>] [--keys-only]"
     echo "  -d <domain>    : The base domain name (e.g., yourdomain.com or sub.yourdomain.com)"
     echo "  -s <selector>  : DKIM selector (e.g., default or mysub)"
     echo "  -t <cloudflare_api_token> : (Optional) Cloudflare API token"
     echo "  -p <ports>     : (Optional) Comma-separated list of ports to open (e.g., 25,587)"
     echo "  -f <on|off>    : (Optional) Enable or disable firewall configuration (default: off)"
+    echo "  --wildcard     : (Optional) Configure DKIM for all subdomains"
+    echo "  --import-keys <private_key_path> <public_key_path>|<archive_file> : (Optional) Use existing DKIM keys instead of generating new ones"
+    echo "  --export-keys <output_directory>|<archive_file> : (Optional) Export generated DKIM keys to the specified directory or archive file"
+    echo "  --keys-only    : (Optional) Only import/export DKIM private and public keys, not other configurations"
     exit 1
 }
 
@@ -90,7 +119,7 @@ rollback() {
 trap 'rollback' ERR
 
 # Get parameters
-while getopts ":d:s:t:p:f:" opt; do
+while getopts ":d:s:t:p:f:-:" opt; do
     case ${opt} in
         d)
             BASE_DOMAIN=${OPTARG}
@@ -107,6 +136,28 @@ while getopts ":d:s:t:p:f:" opt; do
         f)
             FIREWALL=${OPTARG}
             ;;
+        -)
+            case "${OPTARG}" in
+                wildcard)
+                    WILDCARD=true
+                    ;;
+                import-keys)
+                    IMPORT_KEYS=true
+                    PRIVATE_KEY_PATH="${!OPTIND}"; shift
+                    PUBLIC_KEY_PATH="${!OPTIND}"; shift
+                    ;;
+                export-keys)
+                    EXPORT_KEYS=true
+                    OUTPUT_DIRECTORY="${!OPTIND}"; shift
+                    ;;
+                keys-only)
+                    KEYS_ONLY=true
+                    ;;
+                *)
+                    print_usage
+                    ;;
+            esac
+            ;;
         *)
             print_usage
             ;;
@@ -118,12 +169,12 @@ if [ -z "${BASE_DOMAIN}" ] || [ -z "${SELECTOR}" ]; then
 fi
 
 # Use specified ports or default ports if not provided
-if [ -z "${PORTS}" ]; then
+if [ -z "${PORTS}" ];then
     PORTS=${DEFAULT_PORTS}
 fi
 
 # Use specified firewall setting or default setting if not provided
-if [ -z "${FIREWALL}" ]; then
+if [ -z "${FIREWALL}" ];then
     FIREWALL=${DEFAULT_FIREWALL}
 fi
 
@@ -145,6 +196,8 @@ install_package opendkim
 install_package opendkim-tools
 install_package jq
 install_package curl
+install_package sendmail
+install_package sendmail-cf
 
 # Detect and install mail service if not present
 MAIL_SERVICE=""
@@ -154,8 +207,6 @@ elif command -v postfix &> /dev/null; then
     MAIL_SERVICE="postfix"
 else
     # Default to sendmail if no mail service is installed
-    install_package sendmail
-    install_package sendmail-cf
     MAIL_SERVICE="sendmail"
 fi
 
@@ -181,17 +232,51 @@ else
     echo "Firewall configuration skipped."
 fi
 
-# Generate or regenerate DKIM keys
-echo "Generating or regenerating DKIM keys..."
-mkdir -p /etc/opendkim/keys/${BASE_DOMAIN}
-opendkim-genkey -b 2048 -d ${BASE_DOMAIN} -D /etc/opendkim/keys/${BASE_DOMAIN} -s ${SELECTOR} -v
-chown -R opendkim:opendkim /etc/opendkim/keys/${BASE_DOMAIN}
-mv /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.private /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key
+# Generate or import DKIM keys
+echo "Configuring DKIM keys..."
+if [ "$IMPORT_KEYS" = true ]; then
+    echo "Importing existing DKIM keys..."
+    mkdir -p /etc/opendkim/keys/${BASE_DOMAIN}
+    if [[ "$PRIVATE_KEY_PATH" =~ \.tar\.gz$ ]]; then
+        tar -xzf ${PRIVATE_KEY_PATH} -C /etc/opendkim/keys/${BASE_DOMAIN}
+    else
+        cp ${PRIVATE_KEY_PATH} /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key
+        cp ${PUBLIC_KEY_PATH} /etc/opendkim/keys/${BASE_DOMAIN}/default.txt
+    fi
+    chown -R opendkim:opendkim /etc/opendkim/keys/${BASE_DOMAIN}
+else
+    echo "Generating new DKIM keys..."
+    mkdir -p /etc/opendkim/keys/${BASE_DOMAIN}
+    opendkim-genkey -b 2048 -d ${BASE_DOMAIN} -D /etc/opendkim/keys/${BASE_DOMAIN} -s ${SELECTOR} -v
+    chown -R opendkim:opendkim /etc/opendkim/keys/${BASE_DOMAIN}
+    mv /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.private /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key
+fi
+
+# Export DKIM keys if requested
+if [ "$EXPORT_KEYS" = true ]; then
+    echo "Exporting DKIM keys..."
+    mkdir -p ${OUTPUT_DIRECTORY}
+    if [[ "$OUTPUT_DIRECTORY" =~ \.tar\.gz$ ]]; then
+        if [ "$KEYS_ONLY" = true ]; then
+            tar -czf ${OUTPUT_DIRECTORY} -C /etc/opendkim/keys/${BASE_DOMAIN} dkim_private.key default.txt
+        else
+            tar -czf ${OUTPUT_DIRECTORY} -C /etc/opendkim/keys/${BASE_DOMAIN} .
+        fi
+    else
+        if [ "$KEYS_ONLY" = true ]; then
+            cp /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key ${OUTPUT_DIRECTORY}
+            cp /etc/opendkim/keys/${BASE_DOMAIN}/default.txt ${OUTPUT_DIRECTORY}
+        else
+            cp /etc/opendkim/keys/${BASE_DOMAIN}/* ${OUTPUT_DIRECTORY}
+        fi
+    fi
+fi
 
 # Configure OpenDKIM
-echo "Configuring OpenDKIM..."
-backup_file /etc/opendkim.conf
-cat > /etc/opendkim.conf <<EOL
+if [ "$KEYS_ONLY" = false ]; then
+    echo "Configuring OpenDKIM..."
+    backup_file /etc/opendkim.conf
+    cat > /etc/opendkim.conf <<EOL
 AutoRestart             Yes
 AutoRestartRate         10/1h
 Umask                   002
@@ -209,20 +294,26 @@ SignatureAlgorithm      rsa-sha256
 Socket                  inet:${OPENDKIM_PORT}@localhost
 EOL
 
-# Create required files if they do not exist
-echo "Creating required files..."
-if [ ! -f /etc/opendkim/key.table ]; then
-    echo "${SELECTOR}._domainkey.${BASE_DOMAIN} ${BASE_DOMAIN}:${SELECTOR}:/etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key" > /etc/opendkim/key.table
-fi
+    # Create required files
+    echo "Creating required files..."
+    if [ ! -f /etc/opendkim/key.table ]; then
+        echo "${SELECTOR}._domainkey.${BASE_DOMAIN} ${BASE_DOMAIN}:${SELECTOR}:/etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key" > /etc/opendkim/key.table
+    fi
 
-if [ ! -f /etc/opendkim/signing.table ]; then
-    echo "*@${BASE_DOMAIN} ${SELECTOR}._domainkey.${BASE_DOMAIN}" > /etc/opendkim/signing.table
-fi
+    if [ ! -f /etc/opendkim/signing.table ]; then
+        if [ "$WILDCARD" = true ]; then
+            echo "*@${BASE_DOMAIN} ${SELECTOR}._domainkey.${BASE_DOMAIN}" > /etc/opendkim/signing.table
+        else
+            echo "${SELECTOR}._domainkey.${BASE_DOMAIN}" > /etc/opendkim/signing.table
+        fi
+    fi
 
-if [ ! -f /etc/opendkim/trusted.hosts ]; then
-    echo "127.0.0.1
+    if [ ! -f /etc/opendkim/trusted.hosts ]; then
+        echo "127.0.0.1
 localhost
-${BASE_DOMAIN}" > /etc/opendkim/trusted.hosts
+${BASE_DOMAIN}
+*.${BASE_DOMAIN}" > /etc/opendkim/trusted.hosts
+    fi
 fi
 
 # Configure mail service
@@ -230,7 +321,6 @@ configure_sendmail() {
     echo "Configuring Sendmail..."
     backup_file /etc/mail/sendmail.mc
     if ! grep -q "INPUT_MAIL_FILTER(\`opendkim', \`S=inet:${OPENDKIM_PORT}@localhost')" /etc/mail/sendmail.mc; then
-        install_package sendmail sendmail-cf
         cat > /etc/mail/sendmail.mc <<EOL
 divert(-1)dnl
 include(\`/usr/share/sendmail-cf/m4/cf.m4')dnl
@@ -300,7 +390,11 @@ echo "Restarting OpenDKIM..."
 systemctl restart opendkim
 
 # Extract DKIM public key for DNS record
-DKIM_PUBLIC_KEY=$(grep -o 'p=.*' /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.txt | cut -d'"' -f2)
+if [ "$IMPORT_KEYS" = true ]; then
+    DKIM_PUBLIC_KEY=$(grep -o 'p=.*' ${PUBLIC_KEY_PATH} | cut -d'"' -f2)
+else
+    DKIM_PUBLIC_KEY=$(grep -o 'p=.*' /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.txt | cut -d'"' -f2)
+fi
 
 # Function to add DNS record to Cloudflare
 add_dns_record() {
