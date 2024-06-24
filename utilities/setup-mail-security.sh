@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# setup-mail-security.sh
+# setup_mail_security.sh
 #
 # Purpose:
 # This script configures DKIM, SPF, and DMARC for a specified domain on a server running either Sendmail or Postfix,
@@ -8,12 +8,14 @@
 # If a Cloudflare API token is provided, it will automatically add the necessary DNS records.
 #
 # Usage:
-# ./setup-mail-security.sh -d <domain> -s <selector> [-t <cloudflare_api_token>]
+# ./setup_mail_security.sh -d <domain> -s <selector> [-t <cloudflare_api_token>] [-p <ports>] [-f <on|off>]
 # 
 # Parameters:
 # -d <domain>             : The base domain name (e.g., yourdomain.com or sub.yourdomain.com)
 # -s <selector>           : DKIM selector (e.g., default or mysub)
 # -t <cloudflare_api_token> : (Optional) Cloudflare API token for automatically adding DNS records
+# -p <ports>              : (Optional) Comma-separated list of ports to open (e.g., 25,587)
+# -f <on|off>             : (Optional) Enable or disable firewall configuration (default: off)
 #
 # Supported Mail Servers:
 # This script supports the following mail servers:
@@ -40,6 +42,11 @@
 
 set -e
 
+# Configurable variables
+OPENDKIM_PORT=8891
+DEFAULT_PORTS="25,587"
+DEFAULT_FIREWALL="off"
+
 # Backup function to create backups of configuration files
 backup_file() {
     local file=$1
@@ -58,10 +65,12 @@ restore_file() {
 
 # Function to print usage
 print_usage() {
-    echo "Usage: $0 -d <domain> -s <selector> [-t <cloudflare_api_token>]"
+    echo "Usage: $0 -d <domain> -s <selector> [-t <cloudflare_api_token>] [-p <ports>] [-f <on|off>]"
     echo "  -d <domain>    : The base domain name (e.g., yourdomain.com or sub.yourdomain.com)"
     echo "  -s <selector>  : DKIM selector (e.g., default or mysub)"
     echo "  -t <cloudflare_api_token> : (Optional) Cloudflare API token"
+    echo "  -p <ports>     : (Optional) Comma-separated list of ports to open (e.g., 25,587)"
+    echo "  -f <on|off>    : (Optional) Enable or disable firewall configuration (default: off)"
     exit 1
 }
 
@@ -81,7 +90,7 @@ rollback() {
 trap 'rollback' ERR
 
 # Get parameters
-while getopts ":d:s:t:" opt; do
+while getopts ":d:s:t:p:f:" opt; do
     case ${opt} in
         d)
             BASE_DOMAIN=${OPTARG}
@@ -92,6 +101,12 @@ while getopts ":d:s:t:" opt; do
         t)
             CF_API_TOKEN=${OPTARG}
             ;;
+        p)
+            PORTS=${OPTARG}
+            ;;
+        f)
+            FIREWALL=${OPTARG}
+            ;;
         *)
             print_usage
             ;;
@@ -100,6 +115,16 @@ done
 
 if [ -z "${BASE_DOMAIN}" ] || [ -z "${SELECTOR}" ]; then
     print_usage
+fi
+
+# Use specified ports or default ports if not provided
+if [ -z "${PORTS}" ]; then
+    PORTS=${DEFAULT_PORTS}
+fi
+
+# Use specified firewall setting or default setting if not provided
+if [ -z "${FIREWALL}" ]; then
+    FIREWALL=${DEFAULT_FIREWALL}
 fi
 
 # Function to check and install necessary packages
@@ -142,14 +167,19 @@ is_port_open() {
     firewall-cmd --list-ports | grep -q "${port}/tcp"
 }
 
-# Configure firewall to open necessary ports
-echo "Configuring firewall..."
-for port in 25 587 8891; do
-    if ! is_port_open $port; then
-        firewall-cmd --permanent --add-port=${port}/tcp
-    fi
-done
-firewall-cmd --reload
+# Configure firewall to open necessary ports if firewall option is on
+if [ "$FIREWALL" = "on" ]; then
+    echo "Configuring firewall..."
+    IFS=',' read -ra PORT_ARRAY <<< "$PORTS"
+    for port in "${PORT_ARRAY[@]}"; do
+        if ! is_port_open $port; then
+            firewall-cmd --permanent --add-port=${port}/tcp
+        fi
+    done
+    firewall-cmd --reload
+else
+    echo "Firewall configuration skipped."
+fi
 
 # Generate or regenerate DKIM keys
 echo "Generating or regenerating DKIM keys..."
@@ -176,7 +206,7 @@ SigningTable            refile:/etc/opendkim/signing.table
 Mode                    sv
 PidFile                 /var/run/opendkim/opendkim.pid
 SignatureAlgorithm      rsa-sha256
-Socket                  inet:8891@localhost
+Socket                  inet:${OPENDKIM_PORT}@localhost
 EOL
 
 # Create required files if they do not exist
@@ -199,7 +229,7 @@ fi
 configure_sendmail() {
     echo "Configuring Sendmail..."
     backup_file /etc/mail/sendmail.mc
-    if ! grep -q 'INPUT_MAIL_FILTER(`opendkim' /etc/mail/sendmail.mc; then
+    if ! grep -q "INPUT_MAIL_FILTER(\`opendkim', \`S=inet:${OPENDKIM_PORT}@localhost')" /etc/mail/sendmail.mc; then
         install_package sendmail sendmail-cf
         cat > /etc/mail/sendmail.mc <<EOL
 divert(-1)dnl
@@ -234,7 +264,7 @@ FEATURE(\`accept_unresolvable_domains')dnl
 LOCAL_DOMAIN(\`localhost.localdomain')dnl
 MAILER(local)dnl
 MAILER(smtp)dnl
-INPUT_MAIL_FILTER(\`opendkim', \`S=inet:8891@localhost')dnl
+INPUT_MAIL_FILTER(\`opendkim', \`S=inet:${OPENDKIM_PORT}@localhost')dnl
 EOL
 
         m4 /etc/mail/sendmail.mc > /etc/mail/sendmail.cf
@@ -247,11 +277,11 @@ EOL
 configure_postfix() {
     echo "Configuring Postfix..."
     backup_file /etc/postfix/main.cf
-    if ! postconf -n | grep -q "inet:localhost:8891"; then
+    if ! postconf -n | grep -q "inet:localhost:${OPENDKIM_PORT}"; then
         postconf -e "milter_default_action = accept"
         postconf -e "milter_protocol = 6"
-        postconf -e "smtpd_milters = inet:localhost:8891"
-        postconf -e "non_smtpd_milters = inet:localhost:8891"
+        postconf -e "smtpd_milters = inet:localhost:${OPENDKIM_PORT}"
+        postconf -e "non_smtpd_milters = inet:localhost:${OPENDKIM_PORT}"
     else
         echo "Postfix already configured with OpenDKIM. Skipping configuration."
     fi
