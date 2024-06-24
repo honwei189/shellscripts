@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# setup_mail_security.sh
+# setup-mail-security.sh
 #
 # Purpose:
 # This script configures DKIM, SPF, and DMARC for a specified domain on a server running either Sendmail or Postfix,
@@ -8,7 +8,7 @@
 # If a Cloudflare API token is provided, it will automatically add the necessary DNS records.
 #
 # Usage:
-# ./setup_mail_security.sh -d <domain> -s <selector> [-t <cloudflare_api_token>] [-p <ports>] [-f <on|off>]
+# ./setup-mail-security.sh -d <domain> -s <selector> [-t <cloudflare_api_token>] [-p <ports>] [-f <on|off>]
 # 
 # Parameters:
 # -d <domain>             : The base domain name (e.g., yourdomain.com or sub.yourdomain.com)
