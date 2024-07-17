@@ -285,28 +285,49 @@ install_package() {
         echo -e "${BLUE}${BOLD}Installing package: ${package}${NC}"
         yum install -y $package
         return 0
-    else
-        echo -e "${GREEN}${BOLD}Package ${package} already installed${NC}"
-        return 1
+    # else
+    #     echo -e "${GREEN}${BOLD}Package ${package} already installed${NC}"
+    #     return 1
     fi
 }
 
 # Function to enable and start services
 enable_and_start_service() {
     local service=$1
-    systemctl enable $service
-    systemctl start $service
+    if ! systemctl is-active --quiet $service; then
+        systemctl enable $service
+        systemctl start $service
+    else
+        echo -e "${GREEN}${BOLD}Service ${service} is already running.${NC}"
+    fi
+}
+
+install_and_configure_services() {
+    echo -e "${BLUE}${BOLD}Checking and installing necessary packages...${NC}"
+    install_package epel-release
+
+    install_package opendkim && enable_and_start_service opendkim
+    install_package opendkim-tools
+    install_package jq
+    install_package curl
+
+    install_package opendkim && enable_and_start_service opendkim || {
+        echo -e "${RED}${BOLD}Failed to install or start opendkim service.${NC}"
+        exit 1
+    }
+
+    install_package sendmail && enable_and_start_service sendmail || {
+        echo -e "${RED}${BOLD}Failed to install or start sendmail service.${NC}"
+        exit 1
+    }
+
+    install_package sendmail-cf
+
+    echo -e "${GREEN}${BOLD}Necessary packages installed and services started successfully.${NC}"
 }
 
 # Install necessary packages
-echo -e "${BLUE}${BOLD}Checking and installing necessary packages...${NC}"
-install_package epel-release
-install_package opendkim && enable_and_start_service opendkim
-install_package opendkim-tools
-install_package jq
-install_package curl
-install_package sendmail && enable_and_start_service sendmail
-install_package sendmail-cf
+install_and_configure_services
 
 # Detect and install mail service if not present
 if command -v sendmail &> /dev/null; then
@@ -335,6 +356,9 @@ if [ "$FIREWALL" = "on" ];then
             firewall-cmd --permanent --add-port=${port}/tcp
         fi
     done
+    if ! firewall-cmd --list-sources --zone=trusted | grep -q "$TRUSTED_NETWORK"; then
+        firewall-cmd --zone=trusted --add-source=$TRUSTED_NETWORK --permanent
+    fi
     firewall-cmd --reload
 else
     echo -e "${BLUE}${BOLD}Firewall configuration skipped.${NC}"
@@ -346,7 +370,7 @@ if [ "$IMPORT" = true ];then
     echo -e "${BLUE}${BOLD}Importing existing DKIM keys...${NC}"
     mkdir -p /etc/opendkim/keys/${BASE_DOMAIN}
     if [[ "$PRIVATE_KEY_PATH" =~ \.tar\.gz$ ]];then
-        tar -xzf ${PRIVATE_KEY_PATH} -C /etc/opendkim/keys/${BASE_DOMAIN}
+        tar -xzf ${PRIVATE_KEY_PATH} -C /etc/opendkim
     else
         cp ${PRIVATE_KEY_PATH} /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key
         cp ${PUBLIC_KEY_PATH} /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.txt
@@ -373,8 +397,8 @@ import_dkim_keys() {
     BASE_DOMAIN=$(basename $(find /tmp/dkim_import -type f -name 'dkim_private.key' | head -n 1 | xargs dirname))
     SELECTOR=$(basename $(find /tmp/dkim_import -type f -name '*.txt' | head -n 1 | sed 's/\.txt$//'))
     mkdir -p /etc/opendkim/keys/${BASE_DOMAIN}
-    cp /tmp/dkim_import/* /etc/opendkim/keys/${BASE_DOMAIN}
-    chown -R opendkim:opendkim /etc/opendkim/keys/${BASE_DOMAIN}
+    cp -r /tmp/dkim_import/* /etc/opendkim/
+    chown -R opendkim:opendkim /etc/opendkim
     echo -e "${GREEN}${BOLD}DKIM keys and configurations imported for domain ${BASE_DOMAIN} with selector ${SELECTOR}${NC}"
 }
 
@@ -384,14 +408,13 @@ backup_and_overwrite_opendkim_config() {
     backup_file /etc/opendkim/KeyTable
     backup_file /etc/opendkim/SigningTable
     backup_file /etc/opendkim/TrustedHosts
-    cp /etc/opendkim/keys/${BASE_DOMAIN}/KeyTable /etc/opendkim/KeyTable
-    cp /etc/opendkim/keys/${BASE_DOMAIN}/SigningTable /etc/opendkim/SigningTable
-    cp /etc/opendkim/keys/${BASE_DOMAIN}/TrustedHosts /etc/opendkim/TrustedHosts
+    backup_file /etc/opendkim/keys/${BASE_DOMAIN}/dkim_private.key
+    backup_file /etc/opendkim/keys/${BASE_DOMAIN}/${SELECTOR}.txt
 }
 
 if [ "$IMPORT" = true ] && [[ "$PRIVATE_KEY_PATH" =~ \.tar\.gz$ ]];then
-    import_dkim_keys
     backup_and_overwrite_opendkim_config
+    import_dkim_keys
 fi
 
 # Configure OpenDKIM
