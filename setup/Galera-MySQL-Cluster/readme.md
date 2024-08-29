@@ -46,10 +46,10 @@ General Options:
 
 Examples:
   Initialize a new node:
-    ./install_mysql_galera.sh --initialize --mysql-root-password YourPassword --cluster-nodes 10.1.1.122,10.1.1.123
+    ./setup-galera-mysql.sh --initialize --mysql-root-password YourPassword --cluster-nodes 10.1.1.122,10.1.1.123
 
   Add a node to an existing cluster:
-    ./install_mysql_galera.sh --add-node --cluster-nodes 10.1.1.122,10.1.1.123
+    ./setup-galera-mysql.sh --add-node --cluster-nodes 10.1.1.122,10.1.1.123
 
 Note:
   --initialize and --add-node cannot be used together.
