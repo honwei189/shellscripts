@@ -103,7 +103,7 @@ If you encounter issues starting the MySQL WSREP service after a reboot or due t
 
    ```bash
    sudo rm -rf /var/lib/mysql
-   sudo rm -rf /var/log/mysql
+   sudo rm -rf /var/run/mysqld
    ```
 
 2. **Create and Set Directory and File Permissions:**
@@ -122,14 +122,6 @@ If you encounter issues starting the MySQL WSREP service after a reboot or due t
      sudo mkdir -p /var/run/mysqld
      sudo chown mysql:mysql /var/run/mysqld
      sudo chmod 755 /var/run/mysqld
-     ```
-
-   - Create a log file and set permissions:
-
-     ```bash
-     sudo touch /var/log/mysqld.log
-     sudo chown mysql:mysql /var/log/mysqld.log
-     sudo chmod 644 /var/log/mysqld.log
      ```
 
 3. **Start MySQL Service:**
