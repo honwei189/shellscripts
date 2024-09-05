@@ -1,6 +1,6 @@
 # GlusterFS Cluster Setup and Maintenance Script
 
-This script automates the setup, management, and maintenance of a GlusterFS cluster. It provides options to initialize a new cluster, add nodes, join an existing cluster, rejoin, reset configurations, and link nodes to the cluster. This guide offers detailed instructions for using the script and handling various scenarios, including server corruption or replacement.
+This script automates the setup, management, and maintenance of a GlusterFS cluster. It provides options to initialize a new cluster, add nodes, rejoin, reset configurations, and link nodes to the cluster. This guide offers detailed instructions for using the script and handling various scenarios, including server corruption or replacement.
 
 ## NOTE: Supported Operating Systems
 
@@ -14,6 +14,7 @@ This script is primarily designed for **Oracle Linux 9** and **CentOS 9**. While
 - [Important Notes](#important-notes)
 - [Handling Specific Scenarios](#handling-specific-scenarios)
   - [Corrupted Server Reinstallation or Replacement](#corrupted-server-reinstallation-or-replacement)
+  - [Adding a New Server to the Cluster](#adding-a-new-server-to-the-cluster)
   - [Rejoining a Node to an Existing Cluster](#rejoining-a-node-to-an-existing-cluster)
 - [Troubleshooting](#troubleshooting)
 
@@ -36,28 +37,28 @@ sh glusterfs-setup.sh [options]
   - **`--mount-point <path>`**: (Optional) Set a custom mount point (default is `"/mnt/glusterfs"`).
   - **`--cluster-nodes <IP1,IP2,...>`**: (Required) Comma-separated list of all cluster node IPs.
 
-### Adding Nodes to an Existing Cluster
+### Adding Nodes to the Cluster
 
 - **`--add-node`**  
-  Add this node to an existing GlusterFS cluster.
-  - **`--cluster-nodes <IP1,IP2,...>`**: (Required) Comma-separated list of all cluster node IPs.
+  This option should be used on the **master cluster server** to add new nodes to an existing GlusterFS cluster. It is intended for introducing a brand-new node to the cluster. This command propagates the information about the new node to other nodes in the cluster.
+  - **`--cluster-nodes <IP1,IP2,...>`**: Comma-separated list of all cluster node IPs. When using this option on an existing master node, you must provide the IP addresses of all nodes in the cluster to correctly add the new node.
 
 ### Joining an Existing Cluster
 
 - **`--join-node`**  
-  Join this node to an existing GlusterFS cluster.
+  Join a brand-new node to an existing GlusterFS cluster. This is intended for nodes that have not yet been added to any cluster.
   - **`--master-node <IP>`**: (Required) IP address of the master node to join.
 
 ### Rejoining a Cluster
 
 - **`--rejoin`**  
-  Rejoin this node to an existing GlusterFS cluster.
-  - **`--cluster-nodes <IP1,IP2,...>`**: (Required) Comma-separated list of all cluster node IPs.
+  Rejoin this node to an existing GlusterFS cluster. This is typically used when a node's server is corrupted, reset, or has its operating system reinstalled but retains the same IP address.
+  - **`--cluster-nodes <IP1,IP2,...>`**: (Required) Comma-separated list of all cluster node IPs. When rejoining, providing the IP of any one node in the cluster is sufficient.
 
 ### Linking a Node to a Cluster
 
 - **`--link`**  
-  Link this node to the cluster and wait for the master node's confirmation.
+  Link this node to the cluster and wait for the master node's confirmation. This is to be used on new nodes being added to the cluster.
   - **`--master-node <IP>`**: (Required) IP address of the master node to link.
 
 ### General Options
@@ -81,17 +82,25 @@ To initialize a new node with the GlusterFS setup:
 sh glusterfs-setup.sh --initialize --cluster-nodes 10.1.1.210,10.1.1.122
 ```
 
-### Add a Node to an Existing Cluster
+### Add a Node to the Cluster
 
 To add a new node to an existing GlusterFS cluster:
 
+- **Run on the existing master node (e.g., Server 1):**
+
 ```bash
-sh glusterfs-setup.sh --add-node --cluster-nodes 10.1.1.210,10.1.1.122
+sh glusterfs-setup.sh --add-node --cluster-nodes 10.1.1.210,10.1.1.122,10.1.1.123
 ```
 
-### Join a Node to an Existing Cluster
+- **Run the `--link` command on the new node (Server 3):**
 
-To join a node to an existing cluster using the master node's IP:
+```bash
+sh glusterfs-setup.sh --link --master-node 10.1.1.210
+```
+
+### Join a Brand-New Node to an Existing Cluster
+
+To join a brand-new node to an existing cluster, using the master node's IP:
 
 ```bash
 sh glusterfs-setup.sh --join-node --master-node 10.1.1.210
@@ -99,10 +108,10 @@ sh glusterfs-setup.sh --join-node --master-node 10.1.1.210
 
 ### Rejoin a Node to a Cluster
 
-To rejoin a node to a cluster after resetting configurations:
+To rejoin a node to a cluster after server corruption, replacement, or OS reinstallation:
 
 ```bash
-sh glusterfs-setup.sh --rejoin --cluster-nodes 10.1.1.210,10.1.1.122
+sh glusterfs-setup.sh --rejoin --cluster-nodes 10.1.1.210
 ```
 
 ### Link a Node to the Cluster
@@ -127,17 +136,17 @@ sh glusterfs-setup.sh --reset
 
 2. **Initialization**: When initializing a node, you must provide a list of cluster node IPs. After running the `--initialize` command, the script will prompt you to run the `--link` command on all other nodes that need to be added to the cluster.
 
-3. **Adding Nodes**: Ensure that the IPs of the nodes you want to add are reachable from the master node and that the firewall settings allow communication on the required ports (24007-24008 and 49152-49251).
+3. **Adding Nodes (`--add-node`)**: This option should be used on the **master node** to add a new node to an existing cluster. When running this command, you need to use the `--link` command on the new node. This option is suitable when the new node has not been recognized by any cluster.
 
-4. **Joining an Existing Cluster**: When joining an existing cluster, ensure that the master node IP is correct and reachable. The script will handle probing and connecting to the master node.
+4. **Joining a Cluster (`--join-node`)**: This option is exclusively for adding a brand-new node to an existing cluster, where the node has not previously joined any cluster. You must provide the IP address of a master node in the existing cluster.
 
-5. **Rejoining a Cluster**: If a node needs to rejoin a cluster after being disconnected, use the `--rejoin` option. This will reset the node's configuration and attempt to re-establish connections with the cluster nodes.
+5. **Rejoining a Cluster (`--rejoin`)**: If a node has already joined a cluster but needs to rejoin the same cluster due to server corruption, OS reset, or replacement, use the `--rejoin` option. Only the IP of any one node in the cluster is required to rejoin.
 
-6. **Linking Nodes**: The `--link` option should be used on new nodes being added to a cluster. It will reset the node's configuration and wait for the master node to confirm the connection.
+6. **Linking Nodes (`--link`)**: The `--link` option should be used on new nodes to add them to the cluster. It will reset the node's configuration and wait for the master node to confirm the connection.
 
-7. **Resetting Configuration**: Use the `--reset` option carefully. This will remove all existing GlusterFS configurations on the node and require re-initialization or rejoining of the cluster.
+7. **Resetting Configuration (`--reset`)**: Use the `--reset` option carefully. This will remove all existing GlusterFS configurations on the node and require re-initialization or rejoining of the cluster.
 
-8. **Stale File Handles**: If you encounter issues such as "Stale file handle" errors, it may be due to filesystem corruption or a node being improperly removed from the cluster. A reboot or remount of the GlusterFS volume may resolve this issue, but in some cases, a reset and rejoin might be necessary.
+8. **Stale File Handles**: If you encounter "Stale file handle" errors, it may be due to filesystem corruption or a node being improperly removed from the cluster. A reboot or remount of the GlusterFS volume may resolve this issue, but in some cases, a reset and rejoin might be necessary.
 
 ## Handling Specific Scenarios
 
@@ -164,14 +173,16 @@ If a server in the GlusterFS cluster becomes corrupted or needs to be replaced, 
    - The script will wait for the master node to confirm the connection.
 
 4. **Confirm on Master Node**:
-   - On the master node (the primary node in the cluster), run the script to add or rejoin the server to the cluster. Use the `--add-node` or `--rejoin` option depending on the scenario.
-   - Example for adding a new node:
+   - On the master node (the primary node in the cluster), run the script to add the server to the cluster or rejoin the cluster. Use the `--add-node` or `--rejoin` option depending on the scenario.
+  
+
+ - Example for adding a new node:
      ```bash
-     sh glusterfs-setup.sh --add-node --cluster-nodes 10.1.1.210,10.1.1.122
+     sh glusterfs-setup.sh --add-node --cluster-nodes 10.1.1.210,10.1.1.122,10.1.1.123
      ```
    - Example for rejoining a node:
      ```bash
-     sh glusterfs-setup.sh --rejoin --cluster-nodes 10.1.1.210,10.1.1.122
+     sh glusterfs-setup.sh --rejoin --cluster-nodes 10.1.1.210
      ```
 
 5. **Verify the Node Status**:
@@ -183,6 +194,28 @@ If a server in the GlusterFS cluster becomes corrupted or needs to be replaced, 
 
 6. **Handle Stale File Handles or Volume Issues**:
    - If you encounter "Stale file handle" errors, try unmounting the volume, resetting GlusterFS configuration on the node, and rejoining the cluster.
+
+### Adding a New Server to the Cluster
+
+1. **On Server 1 (master node) or Server 2:**
+   Run the script to add the new server (Server 3) to the cluster. The new server (Server 3) will join the cluster using either Server 1 or Server 2 as the reference master node. 
+
+   ```bash
+   sh glusterfs-setup.sh --add-node --cluster-nodes 10.1.1.210,10.1.1.122,10.1.1.123
+   ```
+
+2. **On Server 3 (the new node):**
+   To join the cluster, run the script using the `--link` command with the `--master-node` option:
+
+   ```bash
+   sh glusterfs-setup.sh --link --master-node 10.1.1.210
+   ```
+
+   Alternatively, use Server 2 as the master node:
+
+   ```bash
+   sh glusterfs-setup.sh --link --master-node 10.1.1.122
+   ```
 
 ### Rejoining a Node to an Existing Cluster
 
@@ -199,9 +232,7 @@ If a node has been disconnected or removed from the cluster and needs to be rejo
    - Use the `--rejoin` option to rejoin the node to the cluster.
    - Example:
      ```bash
-     sh glusterfs-setup.sh --rejoin --cluster-nodes
-
- 10.1.1.210,10.1.1.122
+     sh glusterfs-setup.sh --rejoin --cluster-nodes 10.1.1.210
      ```
 
 3. **Verify and Test**:
@@ -212,4 +243,3 @@ If a node has been disconnected or removed from the cluster and needs to be rejo
 - **GlusterFS Daemon Issues**: If the GlusterFS daemon (`glusterd`) fails to start or shows errors, check the logs in `/var/log/glusterfs/` for details and resolve any underlying issues.
 - **Network Issues**: Ensure all nodes are reachable over the network and that firewall settings allow communication on the required ports.
 - **File System Errors**: If encountering file system errors, consider checking the brick paths on each server for integrity. If necessary, unmount the GlusterFS volume, reset the configuration, and rejoin the cluster.
-

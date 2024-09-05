@@ -42,13 +42,13 @@ function show_help() {
   echo -e "    ${GREEN}--cluster-nodes <IP1,IP2,...>${NC}       (Required) Comma-separated list of all cluster node IPs."
   echo ""
 
-  echo -e "${BLUE}Options for Adding Nodes to an Existing Cluster:${NC}"
-  echo -e "  ${GREEN}--add-node${NC}                            Add this node to an existing GlusterFS cluster."
-  echo -e "    ${GREEN}--cluster-nodes <IP1,IP2,...>${NC}       (Required) Comma-separated list of all cluster node IPs."
+  echo -e "${BLUE}Options for Adding a Node to the GlusterFS Cluster:${NC}"
+  echo -e "  ${GREEN}--add-node${NC}                            Add this node to an existing GlusterFS cluster from the master cluster."
+  echo -e "    ${GREEN}--cluster-nodes <IP1,IP2,...>${NC}       (Optional) Comma-separated list of all cluster node IPs."
   echo ""
 
   echo -e "${BLUE}Options for Joining an Existing Cluster:${NC}"
-  echo -e "  ${GREEN}--join-node${NC}                           Join this node to an existing GlusterFS cluster."
+  echo -e "  ${GREEN}--join${NC}                                Join this node to an existing GlusterFS cluster in the new server."
   echo -e "    ${GREEN}--master-node <IP>${NC}                  (Required) IP address of the master node to join."
   echo ""
 
@@ -57,7 +57,7 @@ function show_help() {
   echo -e "    ${GREEN}--cluster-nodes <IP1,IP2,...>${NC}       (Required) Comma-separated list of all cluster node IPs."
   echo ""
 
-  echo -e "${BLUE}Options for Linking Node to Cluster:${NC}"
+  echo -e "${BLUE}Options for Linking a Node to a Cluster:${NC}"
   echo -e "  ${GREEN}--link${NC}                                Link this node to the cluster and wait for the master node's confirmation."
   echo -e "    ${GREEN}--master-node <IP>${NC}                  (Required) IP address of the master node to link."
   echo ""
@@ -77,7 +77,7 @@ function show_help() {
   echo ""
 
   echo -e "  ${GREEN}Join a node to an existing cluster:${NC}"
-  echo -e "    sh $0 ${GREEN}--join-node --master-node 10.1.1.210${NC}"
+  echo -e "    sh $0 ${GREEN}--join --master-node 10.1.1.210${NC}"
   echo ""
 
   echo -e "  ${GREEN}Rejoin a node to an existing cluster:${NC}"
@@ -119,31 +119,6 @@ VOLUME_NAME=$DEFAULT_VOLUME_NAME
 BRICK_PATH=$DEFAULT_BRICK_PATH
 MOUNT_POINT=$DEFAULT_MOUNT_POINT
 
-while [[ "$#" -gt 0 ]]; do
-  case $1 in
-    --initialize) INITIALIZE=1 ;;
-    --add-node) ADD_NODE=1 ;;
-    --join-node) JOIN_NODE=1 ;;
-    --rejoin) REJOIN=1 ;;
-    --reset) RESET=1 ;;
-    --link) LINK=1 ;;
-    --node-ip) NODE_IP="$2"; shift ;;
-    --cluster-nodes) CLUSTER_NODES="$2"; shift ;;
-    --master-node) MASTER_NODE="$2"; shift ;;
-    --volume-name) VOLUME_NAME="$2"; shift ;;
-    --brick-path) BRICK_PATH="$2"; shift ;;
-    --mount-point) MOUNT_POINT="$2"; shift ;;
-    --help) show_help; exit 0 ;;
-    *) echo -e "${RED}Unknown parameter: $1${NC}"; show_help; exit 1 ;;
-  esac
-  shift
-done
-
-# Auto-detect NODE_IP if not provided
-if [ -z "$NODE_IP" ]; then
-  NODE_IP=$(detect_ip)
-  echo -e "${GREEN}Auto-detected local IP: $NODE_IP${NC}"
-fi
 
 # Filter out local IP from cluster-nodes
 function filter_local_ip() {
@@ -416,10 +391,16 @@ function check_and_create_volume() {
 }
 
 # Join node to existing cluster
+# Join node to existing cluster
 function join_node_to_cluster() {
   echo -e "${SEPARATOR}"
   echo -e "${BLUE}Joining this node to existing GlusterFS cluster...${NC}"
   echo -e "${SEPARATOR}"
+
+  echo -e "${RED}Please ensure that this node's IP is not already part of the cluster.${NC}"
+  echo -e "${BLUE}You can check the cluster's peer list on the master node with:${NC}"
+  echo -e "${GREEN}gluster peer status${NC}"
+  read -p "Press [Enter] to confirm you have verified this, or Ctrl+C to abort..."
 
   check_glusterfs_installed
   configure_firewall
@@ -452,15 +433,36 @@ function delete_existing_volume() {
 # Add node to existing cluster
 function add_node_to_cluster() {
   echo -e "${SEPARATOR}"
-  echo -e "${BLUE}Adding this node to existing GlusterFS cluster...${NC}"
+  echo -e "${BLUE}Adding or joining this node to the GlusterFS cluster...${NC}"
   echo -e "${SEPARATOR}"
+
+  echo -e "${RED}Please ensure that this node's IP is not already part of the cluster.${NC}"
+  echo -e "${BLUE}You can check the cluster's peer list on the master node with:${NC}"
+  echo -e "${GREEN}gluster peer status${NC}"
+  read -p "Press [Enter] to confirm you have verified this, or Ctrl+C to abort..."
 
   check_glusterfs_installed
   configure_firewall
   configure_glusterfs
   create_brick_directory
-  filter_local_ip
-  auto_join_cluster
+
+  if [ -n "$CLUSTER_NODES" ]; then
+    # Running on an existing node
+    echo -e "${BLUE}Configuring existing node to add new nodes...${NC}"
+    filter_local_ip
+    auto_join_cluster
+  elif [ -n "$MASTER_NODE" ]; then
+    # Running on a new node
+    echo -e "${BLUE}Joining this new node to the existing cluster via master node $MASTER_NODE...${NC}"
+    gluster peer probe $MASTER_NODE
+
+    check_and_create_volume
+    auto_mount_volume
+  else
+    echo -e "${RED}Error: Either --cluster-nodes or --master-node must be provided for add-node operation.${NC}"
+    show_help
+    exit 1
+  fi
 }
 
 # Rejoin node to cluster
@@ -468,6 +470,11 @@ function rejoin_node_to_cluster() {
   echo -e "${SEPARATOR}"
   echo -e "${BLUE}Rejoining this node to existing GlusterFS cluster...${NC}"
   echo -e "${SEPARATOR}"
+
+  echo -e "${RED}Please ensure that this node's IP exist in the cluster.${NC}"
+  echo -e "${BLUE}You can check the cluster's peer list on the master node with:${NC}"
+  echo -e "${GREEN}gluster peer status${NC}"
+  read -p "Press [Enter] to confirm you have verified this, or Ctrl+C to abort..."
 
   check_glusterfs_installed
   configure_firewall
@@ -494,6 +501,7 @@ function check_glusterfs_installed() {
   fi
 }
 
+# Reset GlusterFS configuration
 function reset_gluster() {
   echo -e "${SEPARATOR}"
   echo -e "${BLUE}Resetting GlusterFS configuration...${NC}"
@@ -503,7 +511,27 @@ function reset_gluster() {
 
   if mountpoint -q $MOUNT_POINT; then
     echo -e "${BLUE}Unmounting $MOUNT_POINT...${NC}"
-    umount $MOUNT_POINT
+    unmount_success=false
+    max_attempts=5
+    attempts=0
+
+    while [ "$attempts" -lt "$max_attempts" ]; do
+      umount $MOUNT_POINT
+      if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Unmounted $MOUNT_POINT successfully.${NC}"
+        unmount_success=true
+        break
+      else
+        echo -e "${RED}Failed to unmount $MOUNT_POINT. Retrying... (${attempts}/${max_attempts})${NC}"
+        attempts=$((attempts + 1))
+        sleep 2
+      fi
+    done
+
+    if [ "$unmount_success" = false ]; then
+      echo -e "${RED}Error: Could not unmount $MOUNT_POINT after multiple attempts. Please check the system and try again.${NC}"
+      exit 1
+    fi
   else
     echo -e "${GREEN}No mount point $MOUNT_POINT to unmount.${NC}"
   fi
@@ -520,44 +548,66 @@ function reset_gluster() {
   echo -e "${GREEN}GlusterFS configuration has been reset.${NC}"
 }
 
-# Execute appropriate action
-if [ "$INITIALIZE" -eq 1 ]; then
-  initialize_glusterfs
-elif [ "$ADD_NODE" -eq 1 ]; then
-  if [ -z "$CLUSTER_NODES" ]; then
-    echo -e "${RED}Error: Add node operation requires --cluster-nodes option.${NC}"
+# Function to process CLI arguments and execute the appropriate action
+function process_cli() {
+  if [ "$INITIALIZE" -eq 1 ]; then
+    initialize_glusterfs
+  elif [ "$ADD_NODE" -eq 1 ]; then
+    add_node
+  elif [ "$REJOIN" -eq 1 ]; then
+    if [ -z "$CLUSTER_NODES" ]; then
+      echo -e "${RED}Error: Rejoin operation requires --cluster-nodes option.${NC}"
+      show_help
+      exit 1
+    fi
+    rejoin_node_to_cluster
+  elif [ "$LINK" -eq 1 ]; then
+    if [ -z "$MASTER_NODE" ]; then
+      echo -e "${RED}Error: Link operation requires --master-node option.${NC}"
+      show_help
+      exit 1
+    fi
+    link_node_to_cluster
+  elif [ "$RESET" -eq 1 ]; then
+    reset_gluster
+    exit 0
+  else
+    # No parameters provided, display help
     show_help
-    exit 1
+    exit 0
   fi
-  add_node_to_cluster
-elif [ "$JOIN_NODE" -eq 1 ]; then
-  if [ -z "$MASTER_NODE" ]; then
-    echo -e "${RED}Error: Join node operation requires --master-node option.${NC}"
-    show_help
-    exit 1
-  fi
-  join_node_to_cluster
-elif [ "$REJOIN" -eq 1 ]; then
-  if [ -z "$CLUSTER_NODES" ]; then
-    echo -e "${RED}Error: Rejoin operation requires --cluster-nodes option.${NC}"
-    show_help
-    exit 1
-  fi
-  rejoin_node_to_cluster
-elif [ "$LINK" -eq 1 ]; then
-  if [ -z "$MASTER_NODE" ]; then
-    echo -e "${RED}Error: Link operation requires --master-node option.${NC}"
-    show_help
-    exit 1
-  fi
-  link_node_to_cluster
-elif [ "$RESET" -eq 1 ]; then
-  reset_gluster
-  exit 1
-else
-  echo -e "${RED}Error: No operation specified.${NC}"
-  show_help
-  exit 1
-fi
 
-echo -e "${GREEN}GlusterFS configuration complete.${NC}"
+  echo -e "${GREEN}GlusterFS configuration complete.${NC}"
+}
+
+function main() {
+  # Parse arguments
+  while [[ "$#" -gt 0 ]]; do
+    case $1 in
+      --initialize) INITIALIZE=1 ;;
+      --add-node) ADD_NODE=1 ;;
+      --rejoin) REJOIN=1 ;;
+      --reset) RESET=1 ;;
+      --link) LINK=1 ;;
+      --node-ip) NODE_IP="$2"; shift ;;
+      --cluster-nodes) CLUSTER_NODES="$2"; shift ;;
+      --master-node) MASTER_NODE="$2"; shift ;;
+      --help) show_help; exit 0 ;;
+      *) echo -e "${RED}Unknown parameter: $1${NC}"; show_help; exit 1 ;;
+    esac
+    shift
+  done
+
+  # Auto-detect NODE_IP if not provided
+  if [ -z "$NODE_IP" ]; then
+    NODE_IP=$(detect_ip)
+    echo -e "${GREEN}Auto-detected local IP: $NODE_IP${NC}"
+  fi
+
+  # Process CLI and execute the appropriate action
+  process_cli
+}
+
+# Execute CLI processing
+main "$@"
+
