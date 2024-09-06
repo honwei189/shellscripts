@@ -1,4 +1,4 @@
-# GlusterFS File Replication Cluster Setup and Maintenance Script
+# GlusterFS Cluster Setup and Maintenance Script for File Replication
 
 This script automates the setup, management, and maintenance of a GlusterFS cluster. It provides options to initialize a new cluster, add nodes, rejoin, reset configurations, and link nodes to the cluster. This guide offers detailed instructions for using the script and handling various scenarios, including server corruption or replacement.
 
