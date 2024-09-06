@@ -183,10 +183,12 @@ function initialize_glusterfs() {
   
   if [ -n "$CLUSTER_NODES" ]; then
     filter_local_ip
+    echo -e "${SEPARATOR}"
     echo -e "${RED}Please run the following command on other cluster nodes (e.g., on 10.1.1.122):${NC}"
-    echo "$0 --link --master-node $NODE_IP"
+    echo "sh $0 --link --master-node $NODE_IP"
     echo -e "${BLUE}After running the command on other nodes, press [Enter] to continue...${NC}"
     read -p "Press [Enter] to continue once all nodes are linked: "
+    echo -e "${SEPARATOR}"
 
     auto_join_cluster
   else
@@ -391,7 +393,6 @@ function check_and_create_volume() {
 }
 
 # Join node to existing cluster
-# Join node to existing cluster
 function join_node_to_cluster() {
   echo -e "${SEPARATOR}"
   echo -e "${BLUE}Joining this node to existing GlusterFS cluster...${NC}"
@@ -423,47 +424,61 @@ function delete_existing_volume() {
     echo -e "${SEPARATOR}"
     
     # Ensure the volume is stopped before deletion
-    gluster volume stop $VOLUME_NAME force
-    gluster volume delete $VOLUME_NAME
+    echo y | gluster volume stop $VOLUME_NAME force
+    echo y | gluster volume delete $VOLUME_NAME
   else
     echo -e "${GREEN}No existing volume $VOLUME_NAME to delete.${NC}"
   fi
 }
 
-# Add node to existing cluster
 function add_node_to_cluster() {
-  echo -e "${SEPARATOR}"
-  echo -e "${BLUE}Adding or joining this node to the GlusterFS cluster...${NC}"
-  echo -e "${SEPARATOR}"
+    echo -e "${SEPARATOR}"
+    echo -e "${BLUE}Adding node(s) to the GlusterFS cluster...${NC}"
+    echo -e "${SEPARATOR}"
 
-  echo -e "${RED}Please ensure that this node's IP is not already part of the cluster.${NC}"
-  echo -e "${BLUE}You can check the cluster's peer list on the master node with:${NC}"
-  echo -e "${GREEN}gluster peer status${NC}"
-  read -p "Press [Enter] to confirm you have verified this, or Ctrl+C to abort..."
+    # Check if current IP is already in the peer list
+    if gluster peer status | grep -A 2 "$NODE_IP" | grep -q "Peer in Cluster (Connected)"; then
+        echo -e "${GREEN}Node $NODE_IP is already part of the cluster as 'Peer in Cluster (Connected)'.${NC}"
+        exit 0
+    fi
 
-  check_glusterfs_installed
-  configure_firewall
-  configure_glusterfs
-  create_brick_directory
+    # Check if the node is in the rejected state
+    if gluster peer status | grep -A 2 "$NODE_IP" | grep -q "Peer Rejected (Connected)"; then
+        echo -e "${RED}Node $NODE_IP is in a rejected state.${NC}"
+        echo -e "${BLUE}Attempting to resolve the rejection...${NC}"
+        gluster peer detach "$NODE_IP"
+        gluster peer probe "$NODE_IP"
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}Reconnected the node $NODE_IP successfully.${NC}"
+        else
+            echo -e "${RED}Failed to reconnect node $NODE_IP. Please check logs for more details.${NC}"
+            exit 1
+        fi
+    fi
 
-  if [ -n "$CLUSTER_NODES" ]; then
-    # Running on an existing node
-    echo -e "${BLUE}Configuring existing node to add new nodes...${NC}"
-    filter_local_ip
-    auto_join_cluster
-  elif [ -n "$MASTER_NODE" ]; then
-    # Running on a new node
-    echo -e "${BLUE}Joining this new node to the existing cluster via master node $MASTER_NODE...${NC}"
-    gluster peer probe $MASTER_NODE
-
-    check_and_create_volume
-    auto_mount_volume
-  else
-    echo -e "${RED}Error: Either --cluster-nodes or --master-node must be provided for add-node operation.${NC}"
-    show_help
-    exit 1
-  fi
+    # Add nodes to the cluster (assuming it's done on master)
+    if [ -n "$CLUSTER_NODES" ]; then
+        IFS=',' read -ra NODES <<< "$CLUSTER_NODES"
+        for PEER in "${NODES[@]}"; do
+            if ! gluster peer status | grep -A 2 "$PEER" | grep -q "Peer in Cluster (Connected)"; then
+                echo -e "${BLUE}Probing node $PEER...${NC}"
+                gluster peer probe "$PEER"
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}Node $PEER added to the cluster successfully.${NC}"
+                else
+                    echo -e "${RED}Failed to add node $PEER to the cluster. Please check the logs.${NC}"
+                fi
+            else
+                echo -e "${GREEN}Node $PEER is already part of the cluster.${NC}"
+            fi
+        done
+    else
+        echo -e "${RED}Error: --cluster-nodes must be provided for the add-node operation.${NC}"
+        show_help
+        exit 1
+    fi
 }
+
 
 # Rejoin node to cluster
 function rejoin_node_to_cluster() {
@@ -484,10 +499,12 @@ function rejoin_node_to_cluster() {
   reset_gluster  
   filter_local_ip
 
+  echo -e "${SEPARATOR}"
   echo -e "${RED}Please run the following command on other cluster nodes (e.g., on 10.1.1.122):${NC}"
   echo "$0 --link --master-node $NODE_IP"
   echo -e "${BLUE}After running the command on other nodes, press [Enter] to continue...${NC}"
   read -p ""
+  echo -e "${SEPARATOR}"
 
   echo -e "${BLUE}Auto-joining cluster...${NC}"
   auto_join_cluster
@@ -506,16 +523,17 @@ function reset_gluster() {
   echo -e "${SEPARATOR}"
   echo -e "${BLUE}Resetting GlusterFS configuration...${NC}"
   echo -e "${SEPARATOR}"
-  
-  delete_existing_volume
 
+  # Check if the mount point is mounted
   if mountpoint -q $MOUNT_POINT; then
     echo -e "${BLUE}Unmounting $MOUNT_POINT...${NC}"
     unmount_success=false
     max_attempts=5
     attempts=0
 
+    # Try regular unmount
     while [ "$attempts" -lt "$max_attempts" ]; do
+      fuser -km $MOUNT_POINT  # Kill any processes using the mount point
       umount $MOUNT_POINT
       if [ $? -eq 0 ]; then
         echo -e "${GREEN}Unmounted $MOUNT_POINT successfully.${NC}"
@@ -528,16 +546,43 @@ function reset_gluster() {
       fi
     done
 
+    # Try forced unmount if regular unmount fails
     if [ "$unmount_success" = false ]; then
-      echo -e "${RED}Error: Could not unmount $MOUNT_POINT after multiple attempts. Please check the system and try again.${NC}"
-      exit 1
+      echo -e "${RED}Warning: Regular unmount failed. Attempting forced unmount...${NC}"
+      umount -l $MOUNT_POINT  # Try lazy/forced unmount
+
+      if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Successfully forced unmount of $MOUNT_POINT.${NC}"
+        unmount_success=true
+      else
+        echo -e "${RED}Error: Could not unmount $MOUNT_POINT after multiple attempts. Please check the system and try again.${NC}"
+        exit 1
+      fi
     fi
   else
     echo -e "${GREEN}No mount point $MOUNT_POINT to unmount.${NC}"
   fi
 
-  echo -e "${BLUE}Removing mount point directory: $MOUNT_POINT...${NC}"
-  rm -rf $MOUNT_POINT
+  # Cleanup stale mount if necessary
+  if [ -d "$MOUNT_POINT" ]; then
+    echo -e "${BLUE}Checking for stale mount at $MOUNT_POINT...${NC}"
+    if mountpoint -q $MOUNT_POINT; then
+      echo -e "${BLUE}Cleaning up stale mount using fusermount...${NC}"
+      fusermount -uz $MOUNT_POINT
+      if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to clean up stale mount at $MOUNT_POINT. Please check manually.${NC}"
+        exit 1
+      fi
+    fi
+
+    # Remove the mount point directory if it exists
+    echo -e "${BLUE}Removing mount point directory: $MOUNT_POINT...${NC}"
+    rm -rf $MOUNT_POINT
+  else
+    echo -e "${GREEN}No mount point directory $MOUNT_POINT found. Skipping removal.${NC}"
+  fi
+
+  delete_existing_volume
 
   echo -e "${BLUE}Clearing GlusterFS configuration...${NC}"
   rm -rf /var/lib/glusterd/*
@@ -548,12 +593,64 @@ function reset_gluster() {
   echo -e "${GREEN}GlusterFS configuration has been reset.${NC}"
 }
 
+
+# Ensure directory is fully removed before remounting
+function auto_mount_volume() {
+  echo -e "${SEPARATOR}"
+  echo -e "${BLUE}Checking and auto-mounting GlusterFS volume...${NC}"
+  echo -e "${SEPARATOR}"
+
+  # Ensure the stale mount is cleaned up before remounting
+  if [ -d "$MOUNT_POINT" ]; then
+    echo -e "${BLUE}Cleaning up stale mount directory $MOUNT_POINT...${NC}"
+    rm -rf $MOUNT_POINT
+    sleep 2  # Add a slight delay to ensure cleanup
+  fi
+
+  echo -e "${BLUE}Creating mount point directory: $MOUNT_POINT${NC}"
+  mkdir -p $MOUNT_POINT
+
+  if ! grep -q "$MOUNT_POINT" /etc/fstab; then
+    echo -e "${BLUE}Adding mount entry to /etc/fstab...${NC}"
+    mount -t glusterfs $NODE_IP:/$VOLUME_NAME $MOUNT_POINT
+    echo "$NODE_IP:/$VOLUME_NAME $MOUNT_POINT glusterfs defaults,_netdev 0 0" >> /etc/fstab
+  fi
+  
+  systemctl daemon-reload
+
+  # Check if mount was successful and retry if necessary
+  max_mount_attempts=5
+  mount_attempts=0
+  mount_success=false
+
+  while [ "$mount_attempts" -lt "$max_mount_attempts" ]; do
+    mount -a 2>&1 | tee /tmp/glusterfs-mount.log
+    if mountpoint -q $MOUNT_POINT; then
+      echo -e "${GREEN}GlusterFS volume mounted at $MOUNT_POINT.${NC}"
+      mount_success=true
+      break
+    else
+      echo -e "${RED}Failed to mount GlusterFS volume, retrying... (${mount_attempts}/${max_mount_attempts})${NC}"
+      mount_attempts=$((mount_attempts + 1))
+      sleep 2
+    fi
+  done
+
+  if [ "$mount_success" = false ]; then
+    echo -e "${RED}Failed to mount GlusterFS volume after multiple attempts. Please check settings.${NC}"
+    echo -e "${RED}Mount log output:${NC}"
+    cat /tmp/glusterfs-mount.log
+    exit 1
+  fi
+}
+
+
 # Function to process CLI arguments and execute the appropriate action
 function process_cli() {
   if [ "$INITIALIZE" -eq 1 ]; then
     initialize_glusterfs
   elif [ "$ADD_NODE" -eq 1 ]; then
-    add_node
+    add_node_to_cluster
   elif [ "$REJOIN" -eq 1 ]; then
     if [ -z "$CLUSTER_NODES" ]; then
       echo -e "${RED}Error: Rejoin operation requires --cluster-nodes option.${NC}"
@@ -586,6 +683,7 @@ function main() {
     case $1 in
       --initialize) INITIALIZE=1 ;;
       --add-node) ADD_NODE=1 ;;
+      --join-node) JOIN_NODE=1 ;;
       --rejoin) REJOIN=1 ;;
       --reset) RESET=1 ;;
       --link) LINK=1 ;;
