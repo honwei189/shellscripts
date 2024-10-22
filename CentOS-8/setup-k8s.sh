@@ -8,6 +8,7 @@
  # @last modified by  : Gordon Lim <honwei189@gmail.com>
  ###
 
+## Install Docker first, and then following..
 
 echo "br_netfilter" >> /etc/modules-load.d/br_netfilter.conf
 modprobe br_netfilter
@@ -15,6 +16,9 @@ echo "net.bridge.bridge-nf-call-ip6tables = 1">> /etc/sysctl.d/01-custom.conf
 echo "net.bridge.bridge-nf-call-iptables = 1">> /etc/sysctl.d/01-custom.conf
 echo "net.bridge.bridge-nf-call-arptables = 1" >> /etc/sysctl.d/01-custom.conf
 sysctl -p /etc/sysctl.d/01-custom.conf
+
+echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
+echo 1 > /proc/sys/net/ipv4/ip_forward
 
 dnf install -y yum-utils device-mapper-persistent-data lvm2
 
@@ -34,19 +38,23 @@ EOF
 
 systemctl daemon-reload
 
-cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key
 EOF
 
 dnf install iproute-tc kubeadm kubelet kubectl kubernetes-cni -y
 
 systemctl enable --now kubelet
+
+sudo systemctl enable --now containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+
 
 #To initialize Kubernetes cluster, must disable swap:
 swapoff -a 
@@ -69,7 +77,8 @@ firewall-cmd --permanent --add-port=8080/tcp
 firewall-cmd --reload
 
 #Initialize the Kubernetes Cluster
-kubeadm init --pod-network-cidr 192.168.0.0/16 --service-cidr 10.96.0.0/12 --service-dns-domain "k8s" --apiserver-advertise-address192.168.0.0
+# kubeadm init --pod-network-cidr 192.168.0.0/16 --service-cidr 10.96.0.0/12 --service-dns-domain "k8s" --apiserver-advertise-address 192.168.0.0
+sudo kubeadm init --pod-network-cidr=192.168.0.0/16
 
 
 #Add to a user:
@@ -82,12 +91,16 @@ export KUBECONFIG=$HOME/.kube/config | tee -a ~/.bashrc
 
 
 #Install at least one network provider on master
-kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s-1.11.yaml --validate=false
 
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 
 #Nodes: Setup and connect:
 #kubeadm join 192.192.192.192:6443 --token ma53bs.fp0uwi2gc9p9efki \
 #    --discovery-token-ca-cert-hash sha256:e756d6706e02f45dc1fa5d6254989d86612ed67aa0f6cd2fc2a2fe5462106vfc
+
+
+kubectl get pods -n kube-system
 
 
 #Deploy a POD Network to the Cluster:
