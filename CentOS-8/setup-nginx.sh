@@ -45,9 +45,9 @@ cd /usr/local/src/
 #cd libmaxminddb/
 #./bootstrap
 
-wget https://github.com/maxmind/libmaxminddb/releases/download/1.6.0/libmaxminddb-1.6.0.tar.gz
-tar xvfz libmaxminddb-1.6.0.tar.gz
-cd libmaxminddb-1.6.0
+wget https://github.com/maxmind/libmaxminddb/releases/download/1.11.0/libmaxminddb-1.11.0.tar.gz
+tar xvfz libmaxminddb-1.11.0.tar.gz
+cd libmaxminddb-1.11.0
 ./configure
 make
 make check
@@ -57,7 +57,7 @@ ldconfig
 
 
 dnf install geoipupdate -y
-dnf install https://github.com/maxmind/geoipupdate/releases/download/v6.1.0/geoipupdate_6.1.0_linux_amd64.rpm -y
+dnf install https://github.com/maxmind/geoipupdate/releases/download/v7.0.1/geoipupdate_7.0.1_linux_amd64.rpm -y
 
 
 
@@ -164,10 +164,10 @@ tar xvfz lua-nginx-module-0.10.26.tar.gz
 
 
 cd /usr/local/src/
-curl -O http://nginx.org/download/nginx-1.24.0.tar.gz
-tar xvzf nginx-1.24.0.tar.gz
+curl -O https://nginx.org/download/nginx-1.27.2.tar.gz
+tar xvzf nginx-1.27.2.tar.gz
 ln -s /usr/lib64/nginx/modules /etc/nginx/
-cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.24.0
+cd /usr/local/src/nginx/modules/ngx_brotli && git submodule update --init && cd /usr/local/src/nginx-1.27.2
 mkdir -p /var/cache/nginx/client_temp
 mkdir -p /etc/nginx
 
