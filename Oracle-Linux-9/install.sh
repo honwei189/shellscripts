@@ -348,9 +348,20 @@ make install
 dnf install python3-pip go-toolset -y
 pip3 install speedtest-cli
 
+
+wget https://go.dev/dl/go1.23.3.linux-amd64.tar.gz
+tar -zxvf go1.23.3.linux-amd64.tar.gz
+mv go /usr/local/
+
+cat << 'EOF' >> ~/.bashrc
+export GOROOT=/usr/local/go
+export GOPATH=$HOME/go
+export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+EOF
+
+source ~/.bash_profile
 mkdir $HOME/go
-echo "" >> ~/.bashrc
-echo "export PATH=\"\$PATH:~/go/bin/\"" >> ~/.bashrc
+
 
 echo "" >> /etc/ssh/sshd_config
 echo "PubkeyAcceptedKeyTypes=+ssh-rsa" >> /etc/ssh/sshd_config
