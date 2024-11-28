@@ -1,14 +1,14 @@
 #!/bin/bash
 ###
- # @description       : Grant certains IPs / dynamic hosts name to access some restriction site.
- #                      And to renew whitelist for NGINX (map method).
- #                      This supports check against x-forward-ip,
- #                      to prevent inaccidentaly deny all incoming ips from cloudflare
- # @version           : "1.1.0"
- # @creator           : Gordon Lim <honwei189@gmail.com>
- # @created           : 14/04/2020 13:43:30
- # @last modified     : 01/06/2020 13:12:40
- # @last modified by  : Gordon Lim <honwei189@gmail.com>
+# @description       : Grant certains IPs / dynamic hosts name to access some restriction site.
+#                      And to renew whitelist for NGINX (map method).
+#                      This supports check against x-forward-ip,
+#                      to prevent inaccidentaly deny all incoming ips from cloudflare
+# @version           : "1.1.0"
+# @creator           : Gordon Lim <honwei189@gmail.com>
+# @created           : 14/04/2020 13:43:30
+# @last modified     : 01/06/2020 13:12:40
+# @last modified by  : Gordon Lim <honwei189@gmail.com>
 ###
 
 ################################# INSTALLATION ################################
@@ -30,7 +30,6 @@
 #    }
 #
 ###############################################################################
-
 
 ################################################################
 # (DO NOT CHANGE)
@@ -169,12 +168,12 @@ update() {
         find=$(cat $WHITELIST_CONF_MAP_FILE | grep "$ip 1")
         find="$(echo -e "${find}" | sed -e 's/^[[:space:]]*//')"
 
-        if [ "$find" == "" ];then
+        if [ "$find" == "" ]; then
             rewrite=1
             break
         fi
     done
-
+    
     if [ $rewrite -eq 1 ]; then
         if [ -f $WHITELIST_CONF_MAP_FILE ]; then
             cat /dev/null >$WHITELIST_CONF_MAP_FILE
@@ -190,50 +189,55 @@ update() {
         #echo "  #fastcgi_param REMOTE_ADDR \$realip;" >> $WHITELIST_CONF_MAP_FILE
         #echo "" >> $WHITELIST_CONF_MAP_FILE
 
-        echo "  map \$http_x_forwarded_for \$real_ip {" >>$WHITELIST_CONF_MAP_FILE
-        echo "      ~^(\d+\.\d+\.\d+\.\d+) \$1;" >>$WHITELIST_CONF_MAP_FILE
-        echo "      default \$remote_addr;" >>$WHITELIST_CONF_MAP_FILE
-        echo "  }" >>$WHITELIST_CONF_MAP_FILE
+        # Write static configuration to the file
+        cat <<EOF >"$WHITELIST_CONF_MAP_FILE"
+  # Process X-Forwarded-For or Tailscale IP addresses
+  map \$http_x_forwarded_for \$real_ip {
+      ~^(\d+\.\d+\.\d+\.\d+) \$1;  # Use X-Forwarded-For if it contains a valid IP address
+      default \$realip_remote_addr;  # Otherwise, use \$realip_remote_addr
+  }
 
-        echo "" >>$WHITELIST_CONF_MAP_FILE
-        echo "  map \$proxy_add_x_forwarded_for \$real_ip {" >>$WHITELIST_CONF_MAP_FILE
-        echo "      \"~(?<IP>([0-9]{1,3}\.){3}[0-9]{1,3}),.*\" \$IP;" >>$WHITELIST_CONF_MAP_FILE
-        echo "  }" >>$WHITELIST_CONF_MAP_FILE
+  # Check if http_x_forwarded_for is a valid IP
+  map \$http_x_forwarded_for \$real_ip_from_forwarded {
+      "~^(\d+\.\d+\.\d+\.\d+)$" \$http_x_forwarded_for;  # Use \$http_x_forwarded_for if it is a valid IP
+      default "";  # Otherwise, set to empty
+  }
 
-        echo "" >>$WHITELIST_CONF_MAP_FILE
-        echo "  fastcgi_param   REMOTE_ADDR    \$real_ip;" >>$WHITELIST_CONF_MAP_FILE
-        echo "  #fastcgi_param   REMOTE_ADDR     \$http_x_forwarded_for;" >>$WHITELIST_CONF_MAP_FILE
+  # Finalize \$real_ip settings with the following priority:
+  # 1. Use \$http_x_forwarded_for if it is a valid IP
+  # 2. Otherwise, use \$proxy_add_x_forwarded_for
+  map \$real_ip_from_forwarded \$real_ip {
+      "" \$proxy_add_x_forwarded_for;  # Use \$proxy_add_x_forwarded_for if \$real_ip_from_forwarded is empty
+      default \$real_ip_from_forwarded;  # Otherwise, use \$real_ip_from_forwarded
+  }
 
-        echo "" >>$WHITELIST_CONF_MAP_FILE
-        echo "  map \$real_ip \$give_white_ip_access {" >>$WHITELIST_CONF_MAP_FILE
-        echo "      default 0;" >>$WHITELIST_CONF_MAP_FILE
+  # Set FastCGI parameters
+  fastcgi_param REMOTE_ADDR \$real_ip;
+  #fastcgi_param REMOTE_ADDR \$http_x_forwarded_for;
 
-        # for ip in $ips; do
-        #     echo "      $ip 1;" >>$WHITELIST_CONF_MAP_FILE
-        # done
+  # Check whitelist based on \$real_ip
+  map \$real_ip \$give_white_ip_access {
+      default 0;
+EOF
 
-        # for host in $hosts; do
-        #     ip=$(host $host | awk '/has address/ { print $4 }')
-        #     echo "      $ip 1;" >>$WHITELIST_CONF_MAP_FILE
-        #     echo "$host - $ip"
-        # done
-
+        # Dynamically append IP whitelist to the configuration file
         for ip in $ipcheck; do
             ip="$(echo -e "${ip}" | sed -e 's/^[[:space:]]*//')"
-            echo "      $ip 1;" >>$WHITELIST_CONF_MAP_FILE
+            echo "      $ip 1;" >>"$WHITELIST_CONF_MAP_FILE"
         done
 
-        #for ip in $(curl --silent https://www.cloudflare.com/ips-v4)
-        #do
-        #    echo "      $ip 1;" >> $WHITELIST_CONF_MAP_FILE
-        #done
+        # Optionally fetch IPs from Cloudflare dynamically (uncomment if needed)
+        # for ip in $(curl --silent https://www.cloudflare.com/ips-v4); do
+        #     echo "      $ip 1;" >>"$WHITELIST_CONF_MAP_FILE"
+        # done
+        # for ip in $(curl --silent https://www.cloudflare.com/ips-v6); do
+        #     echo "      $ip 1;" >>"$WHITELIST_CONF_MAP_FILE"
+        # done
 
-        #for ip in $(curl --silent https://www.cloudflare.com/ips-v6)
-        #do
-        #    echo "      $ip 1;" >> $WHITELIST_CONF_MAP_FILE
-        #done
-
-        echo "  }" >>$WHITELIST_CONF_MAP_FILE
+        # Close the map block
+        cat <<EOF >>"$WHITELIST_CONF_MAP_FILE"
+  }
+EOF
 
         if [ ! -d $NGINX_PATH/conf.d/server ]; then
             mkdir -p $NGINX_PATH/conf.d/server
@@ -321,38 +325,38 @@ list() {
     $SETCOLOR_NORMAL
     echo ""
     echo ""
-    
+
     echo "IPs :"
     echo "----------------------------------------------------------------"
 
     for host in $(cat $NGINX_WHITELIST/ip | egrep -v '^(;|#|//|$)'); do
         $SETCOLOR_FAILURE
-        
+
         $SETCOLOR_NORMAL
         echo -en ""
         $SETCOLOR_SUCCESS
         echo "$host"
-        
+
         $SETCOLOR_NORMAL
     done
 
     echo ""
     echo ""
-    
+
     echo "Dynamic host names :"
     echo "----------------------------------------------------------------"
 
     for host in $(cat $NGINX_WHITELIST/hosts | egrep -v '^(;|#|//|$)'); do
         $SETCOLOR_FAILURE
-        
+
         $SETCOLOR_NORMAL
         echo -en ""
         $SETCOLOR_SUCCESS
         echo "$host"
-        
+
         $SETCOLOR_NORMAL
     done
-    
+
     echo ""
     echo ""
 }
