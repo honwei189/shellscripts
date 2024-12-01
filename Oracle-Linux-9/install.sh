@@ -61,6 +61,15 @@ dnf install screen htop sendmail unzip nginx bind-utils tmpwatch nfs-utils gcc.x
 dnf install php php-fpm php-cli php-json php-common php-mysql php-pdo php-curl php-dom php-simplexml php-xml php-xmlrpc php-xmlreader php-curl php-date php-exif php-filter php-ftp php-gd php-hash php-iconv php-json php-libxml php-pecl-imagick php-mbstring php-mysqlnd php-openssl php-pcre php-posix php-sockets php-spl php-tokenizer php-zlib php-pecl-zip php-brotli php-redis -y
 dnf install mysql mysql-server -y
 
+# AlmaLinux 9.5 - New version of openssl is causing SSH server errors due to an openssl version mismatch
+dnf remove openssh-server openssh-clients -y
+dnf install openssh-server openssh-clients -y
+
+# Switch to using BBR to address bandwidth performance issues and reduce the problem of high latency.
+sysctl net.ipv4.tcp_congestion_control=bbr
+sysctl net.ipv4.tcp_congestion_control # Verify that the BBR setting is activated.
+
+
 chkconfig sendmail on
 service sendmail start
 
