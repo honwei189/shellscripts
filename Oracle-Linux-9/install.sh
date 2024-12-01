@@ -56,7 +56,7 @@ dnf group -y install "Development Tools"
 dnf module reset php -y
 dnf module enable php:remi-8.2 -y
 
-dnf install screen htop sendmail unzip nginx bind-utils tmpwatch nfs-utils gcc.x86_64 pcre-devel.x86_64 openssl-devel.x86_64 GeoIP GeoIP-devel GeoIP-data zlib-devel GeoIP GeoIP-devel GeoIP-data -y
+dnf install screen htop sendmail chkconfig unzip nginx bind-utils tmpwatch nfs-utils gcc.x86_64 pcre-devel.x86_64 openssl-devel.x86_64 GeoIP GeoIP-devel GeoIP-data zlib-devel GeoIP GeoIP-devel GeoIP-data -y
 
 dnf install php php-fpm php-cli php-json php-common php-mysql php-pdo php-curl php-dom php-simplexml php-xml php-xmlrpc php-xmlreader php-curl php-date php-exif php-filter php-ftp php-gd php-hash php-iconv php-json php-libxml php-pecl-imagick php-mbstring php-mysqlnd php-openssl php-pcre php-posix php-sockets php-spl php-tokenizer php-zlib php-pecl-zip php-brotli php-redis -y
 dnf install mysql mysql-server -y
